@@ -1,9 +1,10 @@
 # Light Show
 
 Abstract light that moves with your music, in the browser. Play the built-in
-demo beat, listen through the microphone, or drop in a file, and a
-domain-warped field of colour churns with the mids, swells with the bass,
-splinters with the treble and sends a faint ring outward on each beat, in deep blues, teals and violets.
+demo beat, listen through the microphone, or drop in a file, and slow, gooey
+blobs of teal and violet light rise and merge in the dark like a lava lamp:
+the bass swells them, busier music quickens their drift, and each beat
+warms their cores a little.
 
 ## Run it
 

@@ -9,9 +9,8 @@ void main() { gl_Position = vec4(P[gl_VertexID], 0.0, 1.0); }
 
 const UNIFORMS = [
   'uResolution',
-  'uTime',
+  'uFlow',
   'uBass',
-  'uMid',
   'uTreble',
   'uPulse',
   'uFlash',
@@ -48,6 +47,7 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   gl.useProgram(program);
   gl.bindVertexArray(gl.createVertexArray());
 
+  // Locations are null for uniforms a scene does not use; uniform*() ignores null.
   const loc = {} as Record<UniformName, WebGLUniformLocation | null>;
   for (const name of UNIFORMS) loc[name] = gl.getUniformLocation(program, name);
 
@@ -67,9 +67,8 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       resize();
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(loc.uResolution, canvas.width, canvas.height);
-      gl.uniform1f(loc.uTime, state.timeMs / 1000);
+      gl.uniform1f(loc.uFlow, state.flow);
       gl.uniform1f(loc.uBass, state.bass);
-      gl.uniform1f(loc.uMid, state.mid);
       gl.uniform1f(loc.uTreble, state.treble);
       gl.uniform1f(loc.uPulse, state.pulse);
       gl.uniform1f(loc.uFlash, state.flash);

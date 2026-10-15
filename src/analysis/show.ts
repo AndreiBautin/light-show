@@ -12,6 +12,12 @@ export interface ShowState {
   readonly flash: number;
   /** Count of beats so far; the scene uses it to step its palette. */
   readonly beats: number;
+  /**
+   * Accumulated flow phase in seconds. Music changes its rate, never its value,
+   * so motion can speed up or slow down but never jump. (Scaling absolute time
+   * by a level instead makes the whole field teleport minutes into a song.)
+   */
+  readonly flow: number;
 }
 
 export const INITIAL_SHOW: ShowState = {
@@ -22,6 +28,7 @@ export const INITIAL_SHOW: ShowState = {
   pulse: 0,
   flash: 0,
   beats: 0,
+  flow: 0,
 };
 
 export interface FrameInput {
@@ -48,15 +55,21 @@ export function envelope(
 const decay = (v: number, dtMs: number, halfLifeMs: number): number =>
   v * Math.pow(0.5, dtMs / halfLifeMs);
 
+/** Lava-lamp pace: always drifting, a little quicker when the music is busy. */
+export function flowRate(mid: number): number {
+  return 1.0 + 1.0 * Math.min(1, Math.max(0, mid));
+}
+
 export function stepShow(prev: ShowState, input: FrameInput): ShowState {
   const dt = Math.min(100, Math.max(0, input.timeMs - prev.timeMs));
   return {
     timeMs: input.timeMs,
-    bass: envelope(prev.bass, input.bands.bass, dt, 40, 450),
-    mid: envelope(prev.mid, input.bands.mid, dt, 30, 250),
-    treble: envelope(prev.treble, input.bands.treble, dt, 10, 120),
-    pulse: input.beat ? 1 : decay(prev.pulse, dt, 140),
+    bass: envelope(prev.bass, input.bands.bass, dt, 250, 900),
+    mid: envelope(prev.mid, input.bands.mid, dt, 400, 1200),
+    treble: envelope(prev.treble, input.bands.treble, dt, 150, 600),
+    pulse: input.beat ? 1 : decay(prev.pulse, dt, 350),
     flash: input.beat && input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
     beats: prev.beats + (input.beat ? 1 : 0),
+    flow: prev.flow + (dt / 1000) * flowRate(prev.mid),
   };
 }

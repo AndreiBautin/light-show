@@ -1,19 +1,21 @@
 /**
- * "Prism Flow": an abstract field of domain-warped light.
+ * "Deep Lamp": slow, gooey blobs of cool light rising and merging in the dark,
+ * like a lava lamp seen underwater.
  *
- * - Mid drives the flow speed and the warp, so busier music churns harder.
- * - Bass swells the central bloom and thickens the ribbons.
- * - Treble adds fine filaments and kaleidoscopic folds.
- * - Each beat sends a faint ring outward and nudges the palette.
- * - uFlash is the only full-screen brightness kick, and it is rate-limited upstream.
+ * Motion runs on uFlow, an integrated phase, so the music can change the pace
+ * but never make the scene jump. Everything reacts gently:
+ * - Bass swells the blobs and their glow.
+ * - Mid (via uFlow) sets the drift speed.
+ * - Treble adds a faint shimmer to the blob rims.
+ * - Each beat lifts the inner glow a little; uFlash is a barely visible lift
+ *   and stays behind the upstream flash limiter.
  */
 export const FRAGMENT_SHADER = /* glsl */ `#version 300 es
 precision highp float;
 
 uniform vec2 uResolution;
-uniform float uTime;
+uniform float uFlow;
 uniform float uBass;
-uniform float uMid;
 uniform float uTreble;
 uniform float uPulse;
 uniform float uFlash;
@@ -38,69 +40,74 @@ float noise(vec2 p) {
 float fbm(vec2 p) {
   float v = 0.0;
   float a = 0.5;
-  mat2 r = mat2(0.8, -0.6, 0.6, 0.8);
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     v += a * noise(p);
-    p = r * p * 2.02;
+    p *= 2.03;
     a *= 0.5;
   }
   return v;
 }
 
-// Cool, dark palette: deep navy through teal to violet. Cosine palette
-// (Inigo Quilez) with a low base and narrow swing so it never goes warm or bright.
-vec3 palette(float t) {
-  vec3 a = vec3(0.14, 0.26, 0.42);
-  vec3 b = vec3(0.12, 0.22, 0.30);
-  vec3 c = vec3(1.0, 1.0, 1.0);
-  vec3 d = vec3(0.55, 0.62, 0.72) + 0.02 * uBeats;
-  return a + b * cos(6.28318 * (c * t + d));
+const int BLOBS = 7;
+
+// Each blob rises slowly, sways sideways and wraps from top back to bottom.
+vec2 blobCenter(int i, float t, float aspect) {
+  float fi = float(i);
+  float speed = 0.035 + 0.02 * fract(fi * 0.618);
+  float y = mod(fi * 0.37 + t * speed, 1.6) - 0.8;
+  float x = (fract(fi * 0.731) - 0.5) * aspect * 0.8
+          + 0.18 * sin(t * (0.11 + 0.03 * fi) + fi * 2.1);
+  return vec2(x, y);
+}
+
+float blobRadius(int i) {
+  return 0.11 + 0.07 * fract(float(i) * 0.437);
 }
 
 void main() {
-  vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution) / min(uResolution.x, uResolution.y);
-  float t = uTime * (0.08 + 0.35 * uMid);
+  vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y;
+  float aspect = uResolution.x / uResolution.y;
+  float t = uFlow;
 
-  // Kaleidoscopic fold: more segments as the treble rises.
-  float segments = 3.0 + floor(uTreble * 6.0);
-  float ang = atan(uv.y, uv.x);
-  float rad = length(uv);
-  float seg = 6.28318 / segments;
-  ang = abs(mod(ang, seg) - 0.5 * seg);
-  vec2 k = mix(uv, rad * vec2(cos(ang), sin(ang)), 0.35 + 0.5 * uTreble);
+  // A slow wobble of space makes the blobs organic rather than circular.
+  vec2 p = uv + 0.06 * vec2(fbm(uv * 2.0 + t * 0.15), fbm(uv * 2.0 - t * 0.12 + 5.0)) - 0.03;
 
-  // Two levels of domain warping give the liquid, smoke-like flow.
-  vec2 q = vec2(fbm(k * 1.6 + t), fbm(k * 1.6 - t + 4.7));
-  vec2 r = vec2(fbm(k * 2.0 + 3.0 * q + vec2(1.7, 9.2) + 0.6 * t),
-                fbm(k * 2.0 + 3.0 * q + vec2(8.3, 2.8) - 0.4 * t));
-  float f = fbm(k * 2.2 + (2.0 + 2.5 * uMid) * r);
+  // Metaball field: blobs merge smoothly where their fields overlap.
+  float field = 0.0;
+  for (int i = 0; i < BLOBS; i++) {
+    float r = blobRadius(i) * (1.0 + 0.18 * uBass);
+    vec2 d = p - blobCenter(i, t, aspect);
+    field += r * r / (dot(d, d) + 1e-4);
+  }
 
-  // Ribbons: thin bright contours through the field, thicker with bass.
-  float ribbon = abs(sin(f * 12.0 + uTime * 0.6));
-  ribbon = pow(1.0 - ribbon, 6.0 - 1.5 * uBass);
+  // Background: deep navy, a touch lighter near the bottom where the lamp's heat is.
+  vec3 bg = mix(vec3(0.010, 0.016, 0.040), vec3(0.020, 0.045, 0.085), smoothstep(0.6, -0.6, uv.y));
 
-  vec3 col = palette(f + 0.25 * length(r) + 0.05 * uTime);
-  col *= 0.45 + 1.3 * f * f;
-  col += palette(f + 0.5) * ribbon * (1.1 + 0.35 * uBass);
+  // Blob colour drifts slowly between teal and violet, nudged by the beat count.
+  float hueT = 0.5 + 0.5 * sin(t * 0.07 + uv.y * 1.5 + 0.05 * uBeats);
+  vec3 teal = vec3(0.05, 0.42, 0.52);
+  vec3 violet = vec3(0.28, 0.16, 0.55);
+  vec3 blobCol = mix(teal, violet, hueT);
 
-  // Treble filaments.
-  float fil = pow(noise(k * 40.0 + uTime * 3.0), 12.0) * uTreble * 1.5;
-  col += vec3(0.45, 0.7, 1.0) * fil;
+  float body = smoothstep(0.9, 1.25, field);
+  float core = smoothstep(1.6, 4.0, field);
+  float glow = smoothstep(0.25, 1.0, field) * (1.0 - body);
 
-  // Central bloom that breathes with the bass.
-  col += palette(0.1 * uTime) * exp(-rad * (5.0 - 1.0 * uBass)) * (0.15 + 0.25 * uBass);
+  vec3 col = bg;
+  col += blobCol * glow * (0.25 + 0.25 * uBass);
+  col = mix(col, blobCol * 0.75, body);
+  col += mix(blobCol, vec3(0.55, 0.85, 1.0), 0.35) * core * (0.35 + 0.25 * uPulse + 0.1 * uBass);
 
-  // Beat ring travelling outward as the pulse decays.
-  float ringR = (1.0 - uPulse) * 1.2;
-  float ring = exp(-pow((rad - ringR) * 20.0, 2.0)) * uPulse * uPulse;
-  col += palette(0.3 + 0.13 * uBeats) * ring * 0.35;
+  // Rim light with a faint treble shimmer.
+  float rim = body * (1.0 - smoothstep(1.25, 1.7, field));
+  col += vec3(0.35, 0.6, 0.9) * rim * (0.12 + 0.25 * uTreble * noise(p * 30.0 + t));
 
-  col *= 1.0 + 0.12 * uFlash;
+  col *= 1.0 + 0.05 * uFlash;
 
-  // Vignette and gentle tone mapping.
-  col *= smoothstep(1.6, 0.2, rad);
+  // Vignette, soft tone map, fine grain to avoid banding in the dark gradient.
+  col *= smoothstep(1.4, 0.3, length(uv * vec2(0.8, 1.0)));
   col = col / (1.0 + col);
-  col = pow(col, vec3(0.9));
+  col += (hash(gl_FragCoord.xy + fract(t)) - 0.5) / 255.0;
   outColor = vec4(col, 1.0);
 }
 `;

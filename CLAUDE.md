@@ -11,6 +11,9 @@
   `.claude/launch.json` — change all three together.
 - `stepShow` clamps frame gaps to 100 ms so a backgrounded tab does not
   produce a giant jump; tests that span >100 ms must step in smaller frames.
+- **Never scale time by a music level in a shader.** Motion runs on
+  `ShowState.flow`, an integrated phase; music changes its rate only.
+  `uTime * level` makes the scene teleport minutes into a song.
 - `erasableSyntaxOnly` is on: no TS parameter properties or enums.
 - The demo source in `audio/input.ts` exists so the show (and its checks)
   work without a microphone; keep it.

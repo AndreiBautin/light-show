@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INITIAL_SHOW, envelope, stepShow } from './show';
+import { INITIAL_SHOW, envelope, flowRate, stepShow } from './show';
 
 const quiet = { bass: 0, mid: 0, treble: 0 };
 
@@ -20,7 +20,7 @@ describe('stepShow', () => {
     const hit = stepShow(INITIAL_SHOW, { timeMs: 0, bands: quiet, beat: true, flashAllowed: true });
     const mid = stepShow(hit, { timeMs: 70, bands: quiet, beat: false, flashAllowed: false });
     const later = stepShow(mid, { timeMs: 140, bands: quiet, beat: false, flashAllowed: false });
-    expect(later.pulse).toBeCloseTo(0.5, 5);
+    expect(later.pulse).toBeCloseTo(Math.pow(0.5, 140 / 350), 5);
   });
 
   it('survives a long stall (tab in background) without blowing up', () => {
@@ -33,6 +33,29 @@ describe('stepShow', () => {
     for (const v of [s.bass, s.mid, s.treble, s.pulse, s.flash]) {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe('flow', () => {
+  // Silently wrong if broken: the scene would jump instead of drift.
+  it('never jumps when the music suddenly gets loud', () => {
+    let s = INITIAL_SHOW;
+    let t = 0;
+    for (let i = 0; i < 20_000; i++) {
+      t += 16;
+      const loud = i % 600 < 300;
+      const level = loud ? 1 : 0;
+      const next = stepShow(s, {
+        timeMs: t,
+        bands: { bass: level, mid: level, treble: level },
+        beat: false,
+        flashAllowed: false,
+      });
+      const advance = next.flow - s.flow;
+      expect(advance).toBeGreaterThan(0);
+      expect(advance).toBeLessThanOrEqual(0.016 * flowRate(1) + 1e-9);
+      s = next;
     }
   });
 });
