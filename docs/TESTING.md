@@ -9,6 +9,14 @@
 - **Beat detection** (`beat.test.ts`): finds a 120 BPM synthetic kick and
   its tempo; stays quiet on a sustained tone and in noisy near-silence;
   honours the refractory period.
+- **Song structure** (`structure.test.ts`): one drop at a quiet-to-loud
+  change, none on steady music at any level (the false-positive that would
+  make the show fire constantly), build during a rise, low intensity in a
+  breakdown, no NaN in silence.
+- **Tonal height** (`pitch.test.ts`): ordering of notes, equal octaves, the
+  kick not dragging the melody down, no answer in silence.
+- **Flow** (`show.test.ts`): the phase never jumps however suddenly the
+  music changes.
 - **Flash limiter** (`flash.test.ts`): checked as a property over every
   one-second window, because it is the photosensitivity guarantee.
 - **Show state** (`show.test.ts`): flash only when permitted, decay rate,
@@ -23,5 +31,7 @@
   fails loudly (compile error shown on screen).
 - **Web Audio adapters.** They are thin glue over browser APIs that Node
   cannot run; mocking `AnalyserNode` would only assert that we call it.
+- **Structure and pitch on real music.** The thresholds are tuned on
+  synthetic curves and the demo track; real genres will need tuning by ear.
 - **Beat accuracy on real music.** Needs a labelled corpus; the synthetic
   tracks cover the logic, not the tuning. Revisit with section detection.

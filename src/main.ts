@@ -2,6 +2,8 @@
 import { computeBands } from './analysis/bands';
 import { BeatDetector } from './analysis/beat';
 import { FlashLimiter } from './analysis/flash';
+import { tonalHeight } from './analysis/pitch';
+import { StructureTracker } from './analysis/structure';
 import { INITIAL_SHOW, stepShow, type ShowState } from './analysis/show';
 import { openDemo, openFile, openMicrophone, type AudioInput } from './audio/input';
 import { createRenderer } from './render/renderer';
@@ -28,6 +30,7 @@ const fileInput = byId('file', HTMLInputElement);
 
 let input: AudioInput | undefined;
 let beats = new BeatDetector();
+let structure = new StructureTracker();
 let flashes = new FlashLimiter(config.maxFlashesPerSecond);
 let show: ShowState = INITIAL_SHOW;
 
@@ -37,12 +40,18 @@ function frame(renderer: ReturnType<typeof createRenderer>): void {
   const now = browserClock();
   let bands = SILENT;
   let beat = false;
+  let pitch: number | undefined;
   if (input) {
-    bands = computeBands(input.readSpectrum(), input.sampleRate, input.fftSize);
+    const spectrum = input.readSpectrum();
+    bands = computeBands(spectrum, input.sampleRate, input.fftSize);
     beat = beats.feed(now, bands.bass);
+    pitch = tonalHeight(spectrum, input.sampleRate, input.fftSize);
   }
+  const energy = 0.5 * bands.bass + 0.35 * bands.mid + 0.15 * bands.treble;
+  const reading = structure.feed(now, energy);
+  if (reading.release === 1) log.debug('show.drop', { atMs: Math.round(now) });
   const flashAllowed = beat && flashes.tryFlash(now);
-  show = stepShow(show, { timeMs: now, bands, beat, flashAllowed });
+  show = stepShow(show, { timeMs: now, bands, beat, flashAllowed, structure: reading, pitch });
   renderer.draw(show);
   requestAnimationFrame(() => {
     frame(renderer);
@@ -56,6 +65,7 @@ async function start(open: () => Promise<AudioInput>, source: string): Promise<v
   try {
     input = await open();
     beats = new BeatDetector();
+    structure = new StructureTracker();
     flashes = new FlashLimiter(config.maxFlashesPerSecond);
     status.textContent = '';
     intro.classList.add('hidden');

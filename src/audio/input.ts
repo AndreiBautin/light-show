@@ -71,7 +71,7 @@ export async function openFile(file: File): Promise<AudioInput> {
 }
 
 /**
- * A synthesised 124 BPM groove (kick, hat, pad) so the show can be tried
+ * A synthesised 124 BPM track (intro, build, drop, breakdown) so the show can be tried
  * without a microphone or a file. Scheduled on the audio clock, a bar ahead.
  */
 export function openDemo(): Promise<AudioInput> {
@@ -111,32 +111,67 @@ export function openDemo(): Promise<AudioInput> {
     src.start(t);
   };
   const chords = [220, 174.6, 196, 164.8];
-  const pad = (t: number, root: number): void => {
+  const pad = (t: number, root: number, cutoffHz: number, level: number): void => {
     for (const ratio of [1, 1.25, 1.5]) {
       const osc = ctx.createOscillator();
       osc.type = 'sawtooth';
       osc.frequency.value = root * ratio;
       const lp = ctx.createBiquadFilter();
-      lp.frequency.value = 1200;
+      lp.frequency.value = cutoffHz;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.05, t + 0.3);
+      g.gain.linearRampToValueAtTime(level, t + 0.3);
       g.gain.linearRampToValueAtTime(0, t + beat * 4);
       osc.connect(lp).connect(g).connect(out);
       osc.start(t);
       osc.stop(t + beat * 4);
     }
   };
+  const lead = (t: number, hz: number): void => {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = hz;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.9);
+    osc.connect(g).connect(out);
+    osc.start(t);
+    osc.stop(t + beat);
+  };
+  // A rising then falling phrase, so pitch-driven motion has something to follow.
+  const melody = [440, 523, 659, 784, 880, 784, 659, 523];
 
+  // 16-bar arrangement: intro, build, drop, breakdown. The show reads these as
+  // structure, so the demo exercises builds and drops as well as beats.
   let bar = 0;
   let nextBar = ctx.currentTime + 0.1;
   const schedule = (): void => {
     while (nextBar < ctx.currentTime + 1) {
-      for (let i = 0; i < 4; i++) {
-        kick(nextBar + i * beat);
-        hat(nextBar + i * beat + beat / 2);
+      const section = bar % 16;
+      const root = chords[bar % chords.length] ?? 220;
+      if (section < 4) {
+        // Intro: soft, dark pad and a few hats.
+        pad(nextBar, root, 600, 0.04);
+        hat(nextBar + beat * 2.5);
+      } else if (section < 8) {
+        // Build: kick enters, hats double, the pad opens up bar by bar.
+        const rise = (section - 4) / 4;
+        pad(nextBar, root, 700 + 2500 * rise, 0.045 + 0.02 * rise);
+        for (let i = 0; i < 4; i++) kick(nextBar + i * beat);
+        const hats = section < 6 ? 4 : 8;
+        for (let i = 0; i < hats; i++) hat(nextBar + (i * 4 * beat) / hats + beat / hats);
+      } else if (section < 14) {
+        // Drop: everything, with a melody.
+        pad(nextBar, root, 3000, 0.07);
+        for (let i = 0; i < 4; i++) kick(nextBar + i * beat);
+        for (let i = 0; i < 8; i++) hat(nextBar + (i * beat) / 2 + beat / 4);
+        for (let i = 0; i < 4; i++)
+          lead(nextBar + i * beat, melody[(section * 4 + i) % melody.length] ?? 440);
+      } else {
+        // Breakdown: pad alone.
+        pad(nextBar, root, 900, 0.035);
       }
-      pad(nextBar, chords[bar % chords.length] ?? 220);
       bar++;
       nextBar += beat * 4;
     }

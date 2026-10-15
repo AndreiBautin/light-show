@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { INITIAL_SHOW, envelope, flowRate, stepShow } from './show';
 
 const quiet = { bass: 0, mid: 0, treble: 0 };
+const calm = { intensity: 0, build: 0, release: 0 };
 
 describe('stepShow', () => {
   it('only flashes when the limiter allowed it, but always pulses on a beat', () => {
@@ -10,6 +11,8 @@ describe('stepShow', () => {
       bands: quiet,
       beat: true,
       flashAllowed: false,
+      structure: calm,
+      pitch: undefined,
     });
     expect(denied.pulse).toBe(1);
     expect(denied.flash).toBe(0);
@@ -17,9 +20,30 @@ describe('stepShow', () => {
   });
 
   it('decays the pulse between beats', () => {
-    const hit = stepShow(INITIAL_SHOW, { timeMs: 0, bands: quiet, beat: true, flashAllowed: true });
-    const mid = stepShow(hit, { timeMs: 70, bands: quiet, beat: false, flashAllowed: false });
-    const later = stepShow(mid, { timeMs: 140, bands: quiet, beat: false, flashAllowed: false });
+    const hit = stepShow(INITIAL_SHOW, {
+      timeMs: 0,
+      bands: quiet,
+      beat: true,
+      flashAllowed: true,
+      structure: calm,
+      pitch: undefined,
+    });
+    const mid = stepShow(hit, {
+      timeMs: 70,
+      bands: quiet,
+      beat: false,
+      flashAllowed: false,
+      structure: calm,
+      pitch: undefined,
+    });
+    const later = stepShow(mid, {
+      timeMs: 140,
+      bands: quiet,
+      beat: false,
+      flashAllowed: false,
+      structure: calm,
+      pitch: undefined,
+    });
     expect(later.pulse).toBeCloseTo(Math.pow(0.5, 140 / 350), 5);
   });
 
@@ -29,6 +53,8 @@ describe('stepShow', () => {
       bands: { bass: 1, mid: 1, treble: 1 },
       beat: false,
       flashAllowed: false,
+      structure: calm,
+      pitch: undefined,
     });
     for (const v of [s.bass, s.mid, s.treble, s.pulse, s.flash]) {
       expect(v).toBeGreaterThanOrEqual(0);
@@ -51,10 +77,12 @@ describe('flow', () => {
         bands: { bass: level, mid: level, treble: level },
         beat: false,
         flashAllowed: false,
+        structure: calm,
+        pitch: undefined,
       });
       const advance = next.flow - s.flow;
       expect(advance).toBeGreaterThan(0);
-      expect(advance).toBeLessThanOrEqual(0.016 * flowRate(1) + 1e-9);
+      expect(advance).toBeLessThanOrEqual(0.016 * flowRate(1, 1) + 1e-9);
       s = next;
     }
   });

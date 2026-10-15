@@ -26,7 +26,12 @@ The rules are in `eslint.config.js`, each with a message saying why.
    mean + 1.4σ of the last second, with a 300 ms refractory period.
 5. On a beat, `analysis/flash.ts` `FlashLimiter.tryFlash()` decides whether a
    full-screen flash is allowed.
-6. `analysis/show.ts` `stepShow()` folds that into `ShowState`: fast-attack /
-   slow-release envelopes, a decaying pulse, the beat count.
-7. `render/renderer.ts` `draw()` uploads the state as uniforms;
+6. `analysis/structure.ts` `StructureTracker.feed()` compares ~1.5 s and ~15 s
+   loudness averages to read intensity, build and drop (release);
+   `analysis/pitch.ts` `tonalHeight()` gives the melody's register.
+7. `analysis/show.ts` `stepShow()` folds all of it into `ShowState`: slow
+   envelopes and an integrated `flow` phase that music speeds up but never
+   jumps.
+8. `render/renderer.ts` `draw()` uploads the state as uniforms (the `SCALARS`
+   table maps each to its field);
    `render/scene.frag.ts` paints the field.

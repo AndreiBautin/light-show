@@ -1,10 +1,13 @@
 # Light Show
 
 Abstract light that moves with your music, in the browser. Play the built-in
-demo beat, listen through the microphone, or drop in a file, and slow, gooey
-blobs of teal and violet light rise and merge in the dark like a lava lamp:
-the bass swells them, busier music quickens their drift, and each beat
-warms their cores a little.
+demo track, listen through the microphone, or drop in a file. Three layers of
+cool light drift in the dark like a lava lamp, each played by a different part
+of the music: big slow blobs by the bass, mid-size blobs by chords and vocals
+(rising and turning violet with the melody), small bubbles by the hats. The
+song's structure shapes the whole picture: quiet intros stay sparse and dim,
+builds draw everything to the centre, drops release it outward, breakdowns
+empty out. The beat itself has no effect of its own.
 
 ## Run it
 

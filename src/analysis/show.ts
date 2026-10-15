@@ -1,4 +1,5 @@
 import type { Bands } from './bands';
+import type { StructureReading } from './structure';
 
 /** Everything the renderer needs for one frame. All values are 0..1 unless noted. */
 export interface ShowState {
@@ -18,6 +19,12 @@ export interface ShowState {
    * by a level instead makes the whole field teleport minutes into a song.)
    */
   readonly flow: number;
+  /** Song-level energy relative to its own recent past (see structure.ts). */
+  readonly intensity: number;
+  readonly build: number;
+  readonly release: number;
+  /** Tonal height of the melody, held through gaps. */
+  readonly pitch: number;
 }
 
 export const INITIAL_SHOW: ShowState = {
@@ -29,6 +36,10 @@ export const INITIAL_SHOW: ShowState = {
   flash: 0,
   beats: 0,
   flow: 0,
+  intensity: 0,
+  build: 0,
+  release: 0,
+  pitch: 0.5,
 };
 
 export interface FrameInput {
@@ -37,6 +48,9 @@ export interface FrameInput {
   readonly beat: boolean;
   /** Whether the flash limiter granted a flash on this beat. */
   readonly flashAllowed: boolean;
+  readonly structure: StructureReading;
+  /** Undefined when there is too little tonal energy to judge. */
+  readonly pitch: number | undefined;
 }
 
 /** Fast rise, slow fall: the motion reads as musical rather than jittery. */
@@ -55,9 +69,14 @@ export function envelope(
 const decay = (v: number, dtMs: number, halfLifeMs: number): number =>
   v * Math.pow(0.5, dtMs / halfLifeMs);
 
-/** Lava-lamp pace: always drifting, a little quicker when the music is busy. */
-export function flowRate(mid: number): number {
-  return 1.0 + 1.0 * Math.min(1, Math.max(0, mid));
+const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
+
+/**
+ * Lava-lamp pace: always drifting, quicker when the music is busy, and
+ * briefly surging after a drop.
+ */
+export function flowRate(mid: number, release: number): number {
+  return 1.0 + 1.0 * clamp01(mid) + 1.5 * clamp01(release);
 }
 
 export function stepShow(prev: ShowState, input: FrameInput): ShowState {
@@ -70,6 +89,10 @@ export function stepShow(prev: ShowState, input: FrameInput): ShowState {
     pulse: input.beat ? 1 : decay(prev.pulse, dt, 350),
     flash: input.beat && input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
     beats: prev.beats + (input.beat ? 1 : 0),
-    flow: prev.flow + (dt / 1000) * flowRate(prev.mid),
+    flow: prev.flow + (dt / 1000) * flowRate(prev.mid, prev.release),
+    intensity: envelope(prev.intensity, input.structure.intensity, dt, 800, 2500),
+    build: input.structure.build,
+    release: input.structure.release,
+    pitch: envelope(prev.pitch, input.pitch ?? prev.pitch, dt, 700, 700),
   };
 }

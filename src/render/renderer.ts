@@ -7,16 +7,19 @@ const vec2 P[3] = vec2[3](vec2(-1.0, -1.0), vec2(3.0, -1.0), vec2(-1.0, 3.0));
 void main() { gl_Position = vec4(P[gl_VertexID], 0.0, 1.0); }
 `;
 
-const UNIFORMS = [
-  'uResolution',
-  'uFlow',
-  'uBass',
-  'uTreble',
-  'uPulse',
-  'uFlash',
-  'uBeats',
-] as const;
-type UniformName = (typeof UNIFORMS)[number];
+/** Every per-frame scalar the scene reads, and where it comes from in ShowState. */
+const SCALARS = {
+  uFlow: (s: ShowState) => s.flow,
+  uBass: (s: ShowState) => s.bass,
+  uMid: (s: ShowState) => s.mid,
+  uTreble: (s: ShowState) => s.treble,
+  uIntensity: (s: ShowState) => s.intensity,
+  uBuild: (s: ShowState) => s.build,
+  uRelease: (s: ShowState) => s.release,
+  uPitch: (s: ShowState) => s.pitch,
+  uFlash: (s: ShowState) => s.flash,
+} as const;
+type ScalarName = keyof typeof SCALARS;
 
 export interface Renderer {
   draw(state: ShowState): void;
@@ -48,8 +51,9 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   gl.bindVertexArray(gl.createVertexArray());
 
   // Locations are null for uniforms a scene does not use; uniform*() ignores null.
-  const loc = {} as Record<UniformName, WebGLUniformLocation | null>;
-  for (const name of UNIFORMS) loc[name] = gl.getUniformLocation(program, name);
+  const resolution = gl.getUniformLocation(program, 'uResolution');
+  const names = Object.keys(SCALARS) as ScalarName[];
+  const loc = names.map((name) => [gl.getUniformLocation(program, name), SCALARS[name]] as const);
 
   // Render below native resolution on dense screens: the field is soft anyway.
   const resize = (): void => {
@@ -66,13 +70,8 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
     draw(state) {
       resize();
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.uniform2f(loc.uResolution, canvas.width, canvas.height);
-      gl.uniform1f(loc.uFlow, state.flow);
-      gl.uniform1f(loc.uBass, state.bass);
-      gl.uniform1f(loc.uTreble, state.treble);
-      gl.uniform1f(loc.uPulse, state.pulse);
-      gl.uniform1f(loc.uFlash, state.flash);
-      gl.uniform1f(loc.uBeats, state.beats);
+      gl.uniform2f(resolution, canvas.width, canvas.height);
+      for (const [location, read] of loc) gl.uniform1f(location, read(state));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
   };
