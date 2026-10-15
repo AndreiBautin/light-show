@@ -3,7 +3,7 @@
 Abstract light that moves with your music, in the browser. Play the built-in
 demo beat, listen through the microphone, or drop in a file, and a
 domain-warped field of colour churns with the mids, swells with the bass,
-splinters with the treble and fires a ring outward on every beat.
+splinters with the treble and sends a faint ring outward on each beat, in deep blues, teals and violets.
 
 ## Run it
 

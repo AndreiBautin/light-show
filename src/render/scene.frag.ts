@@ -4,7 +4,7 @@
  * - Mid drives the flow speed and the warp, so busier music churns harder.
  * - Bass swells the central bloom and thickens the ribbons.
  * - Treble adds fine filaments and kaleidoscopic folds.
- * - Each beat sends a ring outward and steps the palette.
+ * - Each beat sends a faint ring outward and nudges the palette.
  * - uFlash is the only full-screen brightness kick, and it is rate-limited upstream.
  */
 export const FRAGMENT_SHADER = /* glsl */ `#version 300 es
@@ -47,12 +47,13 @@ float fbm(vec2 p) {
   return v;
 }
 
-// Cosine palette (Inigo Quilez); the phase steps with every beat.
+// Cool, dark palette: deep navy through teal to violet. Cosine palette
+// (Inigo Quilez) with a low base and narrow swing so it never goes warm or bright.
 vec3 palette(float t) {
-  vec3 a = vec3(0.5);
-  vec3 b = vec3(0.5);
+  vec3 a = vec3(0.14, 0.26, 0.42);
+  vec3 b = vec3(0.12, 0.22, 0.30);
   vec3 c = vec3(1.0, 1.0, 1.0);
-  vec3 d = vec3(0.00, 0.33, 0.67) + 0.13 * uBeats;
+  vec3 d = vec3(0.55, 0.62, 0.72) + 0.02 * uBeats;
   return a + b * cos(6.28318 * (c * t + d));
 }
 
@@ -76,30 +77,30 @@ void main() {
 
   // Ribbons: thin bright contours through the field, thicker with bass.
   float ribbon = abs(sin(f * 12.0 + uTime * 0.6));
-  ribbon = pow(1.0 - ribbon, 6.0 - 3.5 * uBass);
+  ribbon = pow(1.0 - ribbon, 6.0 - 1.5 * uBass);
 
   vec3 col = palette(f + 0.25 * length(r) + 0.05 * uTime);
-  col *= 0.25 + 0.9 * f * f;
-  col += palette(f + 0.5) * ribbon * (0.35 + 0.9 * uBass);
+  col *= 0.45 + 1.3 * f * f;
+  col += palette(f + 0.5) * ribbon * (1.1 + 0.35 * uBass);
 
   // Treble filaments.
-  float fil = pow(noise(k * 40.0 + uTime * 3.0), 12.0) * uTreble * 3.0;
-  col += vec3(fil);
+  float fil = pow(noise(k * 40.0 + uTime * 3.0), 12.0) * uTreble * 1.5;
+  col += vec3(0.45, 0.7, 1.0) * fil;
 
   // Central bloom that breathes with the bass.
-  col += palette(0.1 * uTime) * exp(-rad * (5.0 - 3.0 * uBass)) * (0.2 + 0.8 * uBass);
+  col += palette(0.1 * uTime) * exp(-rad * (5.0 - 1.0 * uBass)) * (0.15 + 0.25 * uBass);
 
   // Beat ring travelling outward as the pulse decays.
   float ringR = (1.0 - uPulse) * 1.2;
-  float ring = exp(-pow((rad - ringR) * 28.0, 2.0)) * uPulse;
-  col += palette(0.3 + 0.13 * uBeats) * ring * 1.4;
+  float ring = exp(-pow((rad - ringR) * 20.0, 2.0)) * uPulse * uPulse;
+  col += palette(0.3 + 0.13 * uBeats) * ring * 0.35;
 
-  col *= 1.0 + 0.6 * uFlash;
+  col *= 1.0 + 0.12 * uFlash;
 
   // Vignette and gentle tone mapping.
   col *= smoothstep(1.6, 0.2, rad);
   col = col / (1.0 + col);
-  col = pow(col, vec3(0.85));
+  col = pow(col, vec3(0.9));
   outColor = vec4(col, 1.0);
 }
 `;

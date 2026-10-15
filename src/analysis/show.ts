@@ -52,7 +52,7 @@ export function stepShow(prev: ShowState, input: FrameInput): ShowState {
   const dt = Math.min(100, Math.max(0, input.timeMs - prev.timeMs));
   return {
     timeMs: input.timeMs,
-    bass: envelope(prev.bass, input.bands.bass, dt, 15, 180),
+    bass: envelope(prev.bass, input.bands.bass, dt, 40, 450),
     mid: envelope(prev.mid, input.bands.mid, dt, 30, 250),
     treble: envelope(prev.treble, input.bands.treble, dt, 10, 120),
     pulse: input.beat ? 1 : decay(prev.pulse, dt, 140),
