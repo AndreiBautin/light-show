@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks a push whose build is not green. Escape hatch: git push --no-verify
+npm run verify

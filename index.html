@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Light Show</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <main id="intro">
+      <h1>Light Show</h1>
+      <p>Abstract light that moves with your music.</p>
+      <div class="actions">
+        <button id="mic" type="button">Listen to microphone</button>
+        <label class="file">Play a file<input id="file" type="file" accept="audio/*" /></label>
+      </div>
+      <p id="status" role="status"></p>
+      <p class="hint">F for fullscreen · H to hide this panel</p>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,67 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: #eee;
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+}
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  display: block;
+}
+#intro {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 24px;
+  border-radius: 16px;
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+#intro.hidden {
+  display: none;
+}
+h1 {
+  margin: 0 0 4px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 20px 0 8px;
+}
+button,
+.file {
+  font: inherit;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+  cursor: pointer;
+}
+button:hover,
+.file:hover {
+  background: rgb(255 255 255 / 16%);
+}
+.file input {
+  display: none;
+}
+.hint {
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+#status:empty {
+  display: none;
+}

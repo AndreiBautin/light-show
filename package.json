@@ -1,0 +1,43 @@
+{
+  "name": "light-show",
+  "version": "0.1.0",
+  "description": "Music-reactive abstract light show in the browser",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test && npm run build",
+    "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AndreiBautin/light-show.git"
+  },
+  "license": "UNLICENSED",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/AndreiBautin/light-show/issues"
+  },
+  "homepage": "https://github.com/AndreiBautin/light-show#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~5.8",
+    "typescript-eslint": "^8.71.2",
+    "vite": "^6.4.4",
+    "vitest": "^3.2.7"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
+}
