@@ -1,55 +1,35 @@
 # Light Show
 
-> **Status: idea.** Nothing is built yet. This README captures the concept so
-> the project starts from a clear brief.
+Abstract light that moves with your music, in the browser. Play the built-in
+demo beat, listen through the microphone, or drop in a file, and a
+domain-warped field of colour churns with the mids, swells with the bass,
+splinters with the treble and fires a ring outward on every beat.
 
-Feed it a song and it builds a light show synced to the music — on screen as
-visuals, and on real smart bulbs where there are any. It hears the beat, the
-drops and the quiet parts, and choreographs to them.
+## Run it
 
-## The wow
+Double-click **`start-app.bat`**. It installs dependencies on first run,
+starts the dev server on <http://localhost:5317> and opens the browser.
 
-Play a track you know and watch the show land exactly on the kick, build
-through the riser and explode on the drop — then watch the room's lights do
-the same.
+Or: `npm install`, then `npm run dev`. Press **F** for fullscreen, **H** to
+hide the panel.
 
-## First version
+`npm run verify` (typecheck, lint, format, tests, build) gates every push.
 
-- **Audio in**: drop in a file, or listen through the microphone.
-- **Analysis**: tempo and beat grid, energy over time, and sections (intro,
-  build, drop, breakdown).
-- **Choreography**: visual scenes chosen per section, with effects fired on
-  beats and accents.
-- **On-screen show**: full-screen visuals that are the main event even with
-  no lights.
-- **Timeline view**: the song's structure drawn out, so you can see why the
-  show does what it does.
+## The idea that makes it work
 
-## Later
+Every musical decision — band levels, beat detection, the flash safety limit,
+how the show state evolves — is a **pure function of the spectrum and a
+timestamp** in `src/analysis/`. The browser only supplies spectra and draws
+the result. That is why the beat detector is tested against synthetic kick
+tracks instead of by ear, and why lint forbids `analysis/` from touching the
+DOM, Web Audio or the clock.
 
-- Smart bulbs (Hue, LIFX, Govee) following the show, with latency
-  compensation.
-- Hand-editing a show on the timeline and saving it.
-- Themes and palettes per mood.
-- Export a show as a video.
+## Safety
 
-## The hard parts
+Full-screen flashes are limited to 3 per second (WCAG 2.3.1) by
+`FlashLimiter`; the limit can be lowered in `.env` but never raised.
 
-- **Musical structure**, not just loudness: finding beats and section changes
-  reliably across genres.
-- **Timing**: visuals and especially network lights have delay that has to be
-  measured and corrected for.
-- **Taste**: choreography that feels designed rather than random flashing.
-- **Accessibility**: a photosensitivity safeguard limiting flash rates.
+## Roadmap
 
-## Related
-
-[Spinner](https://github.com/AndreiBautin/dj-visualizer-generator) renders a
-spinning-record video from a DJ mix. This is the live, music-reactive
-counterpart; the two could share audio analysis later.
-
-## Open questions
-
-- Which smart lights, if any, are available to test with?
-- Browser only, or a desktop app for lower-latency light control?
-- Pre-analysed files only, or live microphone input from the start?
+See the original brief in git history (`899fa3a`): section detection
+(build/drop), more scenes chosen per section, a timeline view, smart bulbs.
