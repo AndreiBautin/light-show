@@ -31,7 +31,7 @@ export interface Panel {
 export function createPanel(
   scenes: readonly PanelScene[],
   handlers: PanelHandlers,
-  options: { readonly tabAudio: boolean },
+  options: { readonly tabAudio: boolean; readonly commit: string | undefined },
 ): Panel {
   const intro = byId('intro', HTMLElement);
   const status = byId('status', HTMLElement);
@@ -48,6 +48,7 @@ export function createPanel(
     mic: byId('mic', HTMLButtonElement),
   } as const;
   sourceButtons.tab.hidden = !options.tabAudio;
+  if (options.commit) byId('build', HTMLElement).textContent = ` · build ${options.commit}`;
   for (const [id, button] of Object.entries(sourceButtons)) {
     button.addEventListener('click', () => {
       handlers.onSource(id as keyof typeof sourceButtons);

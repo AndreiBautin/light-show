@@ -9,12 +9,15 @@ export interface Config {
    * would cache modules and fight hot reload.
    */
   readonly serviceWorker: boolean;
+  /** Short commit this build was made from, shown in the panel; undefined locally. */
+  readonly commit: string | undefined;
 }
 
 export const DEFAULT_CONFIG: Config = {
   logLevel: 'info',
   maxFlashesPerSecond: 3,
   serviceWorker: false,
+  commit: undefined,
 };
 
 export interface ParsedConfig {
@@ -52,7 +55,19 @@ export function parseConfig(env: Readonly<Record<string, unknown>>): ParsedConfi
   // Vite sets PROD to a boolean itself; anything else means not a production build.
   const serviceWorker = env.PROD === true;
 
-  return { config: { logLevel, maxFlashesPerSecond, serviceWorker }, warnings };
+  // Set by the deploy workflow. Only a plain hex SHA is shown, so nothing
+  // else can be smuggled onto the page through it.
+  let commit: string | undefined;
+  const rawCommit = env.VITE_COMMIT;
+  if (rawCommit !== undefined && rawCommit !== '') {
+    if (typeof rawCommit === 'string' && /^[0-9a-f]{7,40}$/i.test(rawCommit)) {
+      commit = rawCommit.slice(0, 7).toLowerCase();
+    } else {
+      warnings.push('VITE_COMMIT is not a commit SHA; not shown');
+    }
+  }
+
+  return { config: { logLevel, maxFlashesPerSecond, serviceWorker, commit }, warnings };
 }
 
 export function loadConfig(): ParsedConfig {

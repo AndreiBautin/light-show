@@ -27,4 +27,12 @@ describe('parseConfig', () => {
     expect(parseConfig({ PROD: 'true' }).config.serviceWorker).toBe(false);
     expect(parseConfig({}).config.serviceWorker).toBe(false);
   });
+
+  it('shows only a real commit SHA, shortened', () => {
+    expect(parseConfig({ VITE_COMMIT: '290D8B2c1e9f' }).config.commit).toBe('290d8b2');
+    expect(parseConfig({}).config.commit).toBeUndefined();
+    const bad = parseConfig({ VITE_COMMIT: '<img src=x>' });
+    expect(bad.config.commit).toBeUndefined();
+    expect(bad.warnings).toHaveLength(1);
+  });
 });

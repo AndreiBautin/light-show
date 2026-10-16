@@ -60,7 +60,7 @@ const panel = createPanel(
     onPick: pick,
     onToggleAuto: toggleAuto,
   },
-  { tabAudio: canShareTabAudio() },
+  { tabAudio: canShareTabAudio(), commit: config.commit },
 );
 
 function pick(index: number): void {

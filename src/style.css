@@ -162,8 +162,16 @@ button,
   display: none;
 }
 
+.build {
+  margin: 16px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.build a {
+  color: inherit;
+}
 .hint {
-  margin: 18px 0 0;
+  margin: 10px 0 0;
   font-size: 0.78rem;
   color: var(--muted);
   line-height: 1.8;

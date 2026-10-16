@@ -5,9 +5,11 @@ updates:
     schedule:
       interval: weekly
     groups:
-      # One PR for the toolchain rather than one per package.
+      # Routine minor and patch bumps arrive as one PR. Majors stay separate:
+      # each is a migration that must pass verify on its own.
       dev-tooling:
         dependency-type: development
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
