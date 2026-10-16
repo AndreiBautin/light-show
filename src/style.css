@@ -209,3 +209,20 @@ kbd {
     transition: none;
   }
 }
+
+/* Short screens (landscape phones, small laptop windows): keep the panel unscrolled. */
+@media (max-height: 640px) {
+  #intro {
+    padding: 16px 20px;
+  }
+  section {
+    margin-top: 12px;
+    padding-top: 10px;
+  }
+  .note {
+    margin-top: 6px;
+  }
+  .hint {
+    display: none;
+  }
+}
