@@ -18,6 +18,7 @@ import { SCENE_HEADER, type Scene } from './common';
 export const MAZE: Scene = {
   id: 'maze',
   name: 'Maze',
+  description: 'A walk through neon corridors. Bass lights the walls; hats spark the panels.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `

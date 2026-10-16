@@ -15,6 +15,7 @@ import { SCENE_HEADER, type Scene } from './common';
 export const RAIN: Scene = {
   id: 'rain',
   name: 'Rain',
+  description: 'Digital rain in three depths. Hats bring more columns; the melody shifts the hue.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `

@@ -44,6 +44,8 @@ export interface FrameInput {
   readonly structure: StructureReading;
   /** Undefined when there is too little tonal energy to judge. */
   readonly pitch: number | undefined;
+  /** Multiplier on how fast everything moves; below 1 for reduced motion. Default 1. */
+  readonly motion?: number;
 }
 
 /** Fast rise, slow fall: the motion reads as musical rather than jittery. */
@@ -80,7 +82,7 @@ export function stepShow(prev: ShowState, input: FrameInput): ShowState {
     mid: envelope(prev.mid, input.bands.mid, dt, 900, 2200),
     treble: envelope(prev.treble, input.bands.treble, dt, 600, 1500),
     flash: input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
-    flow: prev.flow + (dt / 1000) * flowRate(prev.mid, prev.release),
+    flow: prev.flow + (dt / 1000) * flowRate(prev.mid, prev.release) * (input.motion ?? 1),
     intensity: envelope(prev.intensity, input.structure.intensity, dt, 800, 2500),
     build: input.structure.build,
     release: input.structure.release,

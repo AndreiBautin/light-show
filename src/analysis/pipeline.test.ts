@@ -46,4 +46,22 @@ describe('ShowPipeline', () => {
     expect(after.flow - last.flow).toBeLessThan(0.1);
     expect(Math.abs(after.bass - last.bass)).toBeLessThan(0.05);
   });
+
+  it('moves more slowly under reduced motion, and never flashes', () => {
+    const normal = new ShowPipeline(3);
+    const reduced = new ShowPipeline(3);
+    reduced.setReducedMotion(true);
+    let a = 0;
+    let b = 0;
+    let flashed = false;
+    for (let t = 0; t <= 5000; t += 16) {
+      const kick = lowEnd(Math.min(1, 0.2 + 0.9 * Math.exp(-(t % 500) / 40)));
+      a = normal.feed(t, kick).show.flow;
+      const s = reduced.feed(t, kick).show;
+      b = s.flow;
+      flashed ||= s.flash > 0;
+    }
+    expect(b).toBeCloseTo(a * 0.4, 5);
+    expect(flashed).toBe(false);
+  });
 });

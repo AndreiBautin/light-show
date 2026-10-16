@@ -18,6 +18,7 @@ import { SCENE_HEADER, type Scene } from './common';
 export const PIPES: Scene = {
   id: 'pipes',
   name: 'Pipes',
+  description: 'Pipes grow through a 3D grid until it fills. A drop sends light racing along them.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `

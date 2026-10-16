@@ -31,6 +31,7 @@ export class ShowPipeline {
   private flashes: FlashLimiter;
   private show: ShowState = INITIAL_SHOW;
   private readonly maxFlashesPerSecond: number;
+  private reduced = false;
 
   constructor(maxFlashesPerSecond: number) {
     this.maxFlashesPerSecond = maxFlashesPerSecond;
@@ -47,6 +48,14 @@ export class ShowPipeline {
     this.flashes = new FlashLimiter(this.maxFlashesPerSecond);
   }
 
+  /**
+   * For viewers who ask the OS for less motion: everything moves at 40% speed
+   * and the full-screen flash is off entirely.
+   */
+  setReducedMotion(on: boolean): void {
+    this.reduced = on;
+  }
+
   feed(nowMs: number, input: SpectrumFrame | undefined): PipelineFrame {
     let bands = SILENT;
     let beat = false;
@@ -58,13 +67,14 @@ export class ShowPipeline {
     }
     const energy = 0.5 * bands.bass + 0.35 * bands.mid + 0.15 * bands.treble;
     const reading = this.structure.feed(nowMs, energy);
-    const flashAllowed = beat && this.flashes.tryFlash(nowMs);
+    const flashAllowed = beat && !this.reduced && this.flashes.tryFlash(nowMs);
     this.show = stepShow(this.show, {
       timeMs: nowMs,
       bands,
       flashAllowed,
       structure: reading,
       pitch,
+      motion: this.reduced ? 0.4 : 1,
     });
     return { show: this.show, drop: reading.release === 1 };
   }

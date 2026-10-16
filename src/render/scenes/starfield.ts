@@ -13,6 +13,7 @@ import { SCENE_HEADER, type Scene } from './common';
 export const STARFIELD: Scene = {
   id: 'starfield',
   name: 'Starfield',
+  description: 'Flight through the stars. Busier music flies faster; a drop jumps to warp.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `

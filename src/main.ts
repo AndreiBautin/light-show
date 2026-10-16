@@ -1,7 +1,14 @@
 // Composition root: the only file that wires adapters to the analysis core.
 import { SceneDirector } from './analysis/director';
 import { ShowPipeline } from './analysis/pipeline';
-import { openDemo, openFile, openMicrophone, type AudioInput } from './audio/input';
+import {
+  canShareTabAudio,
+  openDemo,
+  openFile,
+  openMicrophone,
+  openTab,
+  type AudioInput,
+} from './audio/input';
 import { browserClock } from './platform/clock';
 import { loadConfig } from './platform/config';
 import { createLogger } from './platform/logger';
@@ -11,6 +18,7 @@ import { SCENES } from './render/scenes';
 import { bindControls } from './ui/controls';
 import { byId } from './ui/dom';
 import { createHud } from './ui/hud';
+import { hideCursorWhenIdle } from './ui/idle';
 import { checkAudioFile } from './ui/file-check';
 import { createPanel, type SourceId } from './ui/panel';
 import { flagFromQuery, queryForScene, sceneFromQuery } from './ui/scene-url';
@@ -23,6 +31,13 @@ const canvas = byId('stage', HTMLCanvasElement);
 const pipeline = new ShowPipeline(config.maxFlashesPerSecond);
 const governor = new ResolutionGovernor();
 const hud = createHud(flagFromQuery(window.location.search, 'debug'));
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+pipeline.setReducedMotion(reducedMotion.matches);
+reducedMotion.addEventListener('change', () => {
+  pipeline.setReducedMotion(reducedMotion.matches);
+});
+hideCursorWhenIdle(3000);
 
 // A scene named in the URL is a choice: show it and stay on it.
 const requested = sceneFromQuery(
@@ -37,7 +52,7 @@ let shownScene = -1;
 let lastFrameMs: number | undefined;
 
 const panel = createPanel(
-  SCENES.map((s) => s.name),
+  SCENES,
   {
     onSource: (source, file) => {
       void start(source, file);
@@ -45,6 +60,7 @@ const panel = createPanel(
     onPick: pick,
     onToggleAuto: toggleAuto,
   },
+  { tabAudio: canShareTabAudio() },
 );
 
 function pick(index: number): void {
@@ -107,6 +123,8 @@ function open(source: SourceId, file: File | undefined): Promise<AudioInput> {
   switch (source) {
     case 'demo':
       return openDemo();
+    case 'tab':
+      return openTab();
     case 'mic':
       return openMicrophone();
     case 'file':
@@ -119,28 +137,42 @@ async function start(source: SourceId, file?: File): Promise<void> {
     const verdict = checkAudioFile(file.name, file.type, file.size);
     if (!verdict.ok) {
       log.warn('audio.file_rejected', { type: file.type, bytes: file.size });
-      panel.setStatus(verdict.reason);
+      panel.setStatus(verdict.reason, 'error');
       return;
     }
   }
   input?.stop();
   input = undefined;
-  panel.setStatus('Starting…');
+  panel.setSource(undefined);
+  panel.setStatus(source === 'tab' ? 'Pick a tab, and tick "Share tab audio".' : 'Starting…');
   try {
     input = await open(source, file);
     pipeline.newSource();
+    panel.setSource(source);
     panel.setStatus('');
     panel.setOpen(false);
     log.info('audio.started', { source, sampleRate: input.sampleRate });
   } catch (err) {
     const name = err instanceof Error ? err.name : 'unknown';
     log.warn('audio.failed', { source, error: name });
-    panel.setStatus(
-      name === 'NotAllowedError'
-        ? 'Microphone permission was declined. Allow it in the browser, or play a file instead.'
-        : 'Could not start audio. Try another file, or the microphone.',
-    );
+    panel.setStatus(failureMessage(source, name), 'error');
   }
+}
+
+/** What went wrong starting a source, and what to do about it. */
+function failureMessage(source: SourceId, error: string): string {
+  if (error === 'NoAudioError') {
+    return 'That share had no sound. Try again and tick "Share tab audio" in the picker.';
+  }
+  if (error === 'NotAllowedError') {
+    return source === 'tab'
+      ? 'Sharing was cancelled. Pick a tab to try again, or use the demo track.'
+      : 'Microphone permission was declined. Allow it from the address bar, or use a browser tab or a file.';
+  }
+  if (error === 'NotFoundError')
+    return 'No microphone was found. Try a browser tab or a file instead.';
+  if (source === 'file') return 'That file could not be played. Try an MP3, WAV or FLAC.';
+  return 'Could not start the sound. Try the demo track, or another source.';
 }
 
 if (config.serviceWorker && 'serviceWorker' in navigator) {
@@ -170,5 +202,8 @@ try {
   frame(renderer);
 } catch (err) {
   log.error('render.unavailable', { error: err instanceof Error ? err.message : 'unknown' });
-  panel.setStatus('This browser cannot run the visuals (WebGL2 is unavailable).');
+  panel.setStatus(
+    'This browser cannot draw the visuals: WebGL2 is unavailable. Try a recent Chrome, Edge or Firefox with hardware acceleration on.',
+    'error',
+  );
 }

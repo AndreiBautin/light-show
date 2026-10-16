@@ -21,6 +21,8 @@ import { SCENE_HEADER, type Scene } from './common';
 export const ECHOES: Scene = {
   id: 'echoes',
   name: 'Echoes',
+  description:
+    'Neon polygons bounce through 3D, trailing echoes. Bass sizes them; the mids stretch the trails.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `

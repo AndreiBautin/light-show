@@ -60,6 +60,8 @@ export interface Scene {
   readonly id: string;
   /** Shown in the picker. */
   readonly name: string;
+  /** One line for the picker: what you see, and what the music does to it. */
+  readonly description: string;
   /** Full fragment shader source, starting with SCENE_HEADER. */
   readonly fragment: string;
 }

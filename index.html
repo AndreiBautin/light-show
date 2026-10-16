@@ -15,21 +15,39 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <canvas id="stage"></canvas>
-    <main id="intro">
-      <h1>Light Show</h1>
-      <p>Abstract light that moves with your music.</p>
-      <div class="actions">
-        <button id="demo" type="button">Play demo (silent)</button>
-        <button id="mic" type="button">Listen to microphone</button>
-        <label class="file">Play a file<input id="file" type="file" accept="audio/*" /></label>
-      </div>
+    <canvas id="stage" aria-label="Visualisation" role="img"></canvas>
+    <main id="intro" aria-labelledby="title">
+      <h1 id="title">Light Show</h1>
+      <p class="tagline">Classic screensavers, played by your music.</p>
+
+      <section aria-labelledby="sound-heading">
+        <h2 id="sound-heading">Sound</h2>
+        <div class="choices">
+          <button id="demo" type="button" aria-pressed="false">Demo track</button>
+          <button id="tab" type="button" aria-pressed="false" hidden>Browser tab</button>
+          <button id="mic" type="button" aria-pressed="false">Microphone</button>
+          <label class="file" id="file-label">
+            File<input id="file" type="file" accept="audio/*" />
+          </label>
+        </div>
+        <p class="note" id="sound-note">The demo is silent: it only drives the visuals.</p>
+      </section>
+
       <p id="status" role="status"></p>
-      <div class="scenes-row">
-        <div id="scenes" class="scenes" aria-label="Screensaver"></div>
-        <button id="auto" type="button" class="auto">Auto: on</button>
-      </div>
-      <p class="hint">← → change screensaver · A auto · F fullscreen · H hide this panel</p>
+
+      <section aria-labelledby="scene-heading">
+        <h2 id="scene-heading">Screensaver</h2>
+        <div id="scenes" class="choices"></div>
+        <p class="note" id="scene-about"></p>
+        <button id="auto" type="button" class="auto" aria-pressed="true">
+          Auto-change on the drop
+        </button>
+      </section>
+
+      <p class="hint">
+        <kbd>←</kbd> <kbd>→</kbd> screensaver · <kbd>A</kbd> auto · <kbd>F</kbd> fullscreen ·
+        <kbd>H</kbd> hide · on touch: swipe and tap
+      </p>
     </main>
     <div id="caption" aria-live="polite"></div>
     <script type="module" src="/src/main.ts"></script>

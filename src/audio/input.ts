@@ -54,6 +54,35 @@ export async function openMicrophone(): Promise<AudioInput> {
   });
 }
 
+/** True where the browser can share another tab's sound (Chromium today). */
+export function canShareTabAudio(): boolean {
+  return typeof navigator.mediaDevices.getDisplayMedia === 'function';
+}
+
+/**
+ * Listen to another browser tab: Spotify, YouTube, anything. The browser asks
+ * which tab to share; the sound keeps playing from that tab, so it is only
+ * analysed here, never played again. Throws a NoAudioError if the person
+ * shares without ticking "share tab audio".
+ */
+export async function openTab(): Promise<AudioInput> {
+  // Chromium only offers audio alongside video, so ask for both and drop the video.
+  const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  for (const track of stream.getVideoTracks()) track.stop();
+  if (stream.getAudioTracks().length === 0) {
+    for (const track of stream.getTracks()) track.stop();
+    const err = new Error('the shared tab has no audio');
+    err.name = 'NoAudioError';
+    throw err;
+  }
+  const ctx = new AudioContext();
+  const analyser = createAnalyser(ctx);
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  return wrap(ctx, analyser, () => {
+    for (const track of stream.getTracks()) track.stop();
+  });
+}
+
 export async function openFile(file: File): Promise<AudioInput> {
   const url = URL.createObjectURL(file);
   const element = new Audio(url);

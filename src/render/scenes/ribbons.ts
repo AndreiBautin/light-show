@@ -16,6 +16,8 @@ import { SCENE_HEADER, type Scene } from './common';
 export const RIBBONS: Scene = {
   id: 'ribbons',
   name: 'Ribbons',
+  description:
+    'Twisting neon bands loop through space. Bass widens them; a drop flares their sheen.',
   fragment:
     SCENE_HEADER +
     /* glsl */ `
