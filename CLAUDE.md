@@ -34,3 +34,7 @@
   believing a number. Canvas readback returns zeros (no preserved buffer).
 - Switching git branches under a running dev server can make Vite restart
   on its default port (5173); restart it if 5317 stops answering.
+- **Workflow actions are pinned to 40-hex SHAs** with a version comment;
+  Dependabot updates them. Branch protection on `main` requires the
+  `verify` and `secrets` checks; never add a required review (a solo
+  maintainer cannot approve their own PR).

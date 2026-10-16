@@ -99,5 +99,6 @@ Proposed, not started:
   a fish-tank, original flying objects (not the trademarked toasters).
 - **Tune the analysis on real music**: thresholds are set on synthetic
   tracks and the demo; a few genres by ear would sharpen drops and builds.
-- **Share card**: an Open Graph image and description so the link previews
-  well when posted.
+- **Toolchain majors**: ESLint 10, TypeScript 7 and Vite 8 are out. Dependabot
+  bundled them and verify failed (PR #5, closed); each now arrives as its own
+  PR, to be migrated one at a time.
