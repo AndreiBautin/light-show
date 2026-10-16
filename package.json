@@ -20,7 +20,7 @@
     "type": "git",
     "url": "git+https://github.com/AndreiBautin/light-show.git"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/AndreiBautin/light-show/issues"
