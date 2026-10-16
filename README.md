@@ -1,42 +1,53 @@
 # Light Show
 
+**Live: <https://andreibautin.github.io/light-show/>**
+
 Classic 90s/2000s screensavers, rebuilt in WebGL and played by your music.
-Six scenes, all neon on black: **Echoes** (bouncing polygons with trails),
-**Starfield** (warp on the drop), **Pipes**, **Ribbons**, **Rain** (digital
-rain) and **Maze** (a corridor fly-through). Play the built-in demo track
-(silent: it only drives the visuals), listen through the microphone, or drop
-in a file.
 
-Each scene reads the same musical state: bass, mids, treble, the melody's
-register, and the song's structure (intensity, builds, drops). Auto mode
-changes scene on a drop once a scene has had its run, dipping through black.
-The beat itself never strobes the screen.
+![Echoes, one of the six scenes](docs/images/echoes.jpg)
 
-## Run it
+Six scenes, all neon on black: **Echoes**, **Starfield**, **Pipes**,
+**Ribbons**, **Rain** and **Maze** ([what each does with the music](docs/SCENES.md)).
+Feed it the built-in demo track (silent, it only drives the visuals),
+**another browser tab** playing Spotify or YouTube, the microphone, or a
+file. Auto mode changes scene on a drop, dipping through black. The beat
+never strobes the screen.
 
-Double-click **`start-app.bat`**. It installs dependencies on first run,
-starts the dev server on <http://localhost:5317> and opens the browser.
+## Use it
 
-Or: `npm install`, then `npm run dev`.
+Open the live link and pick a sound. **← →** change screensaver, **A** auto,
+**F** fullscreen, **H** hide the panel; on a phone, swipe and tap.
+`?scene=pipes` links straight to one scene; `?debug` shows frame rate.
 
-Keys: **← →** change screensaver · **A** auto on/off · **F** fullscreen ·
-**H** hide the panel. `?scene=pipes` links straight to one scene.
+**Install it as an app:** in Chrome or Edge, the install icon in the address
+bar (or ⋮ → Install). It then opens in its own window and works offline.
 
-`npm run verify` (typecheck, lint, format, tests, build) gates every push and
-every deploy. Pushing to `main` deploys to GitHub Pages
-(`.github/workflows/pages.yml`); the site installs as an app and works offline.
+## Run it locally
+
+Double-click **`start-app.bat`**: it installs dependencies on first run,
+starts the dev server on <http://localhost:5317> and opens the browser. Or
+`npm install` then `npm run dev`.
+
+`npm run verify` (typecheck, lint, format, tests with a coverage floor,
+build) gates every push and every deploy. Pushing to `main` deploys to
+GitHub Pages.
 
 ## The idea that makes it work
 
-Every musical decision — band levels, beat detection, song structure, the
-flash safety limit, which scene plays — is a **pure function of the spectrum
-and a timestamp** in `src/analysis/`. Scenes never see time directly: they
-move on `flow`, a phase the music speeds up but can never make jump. That is
-why the detectors are tested against synthetic tracks instead of by ear, and
-why every screensaver's trails, pipes and paths are a function of `flow`
-alone, with nothing remembered between frames.
+Every musical decision — band levels, beats, song structure, the flash
+safety limit, which scene plays — is a **pure function of the spectrum and a
+timestamp** in `src/analysis/`. Scenes never see time directly: they move on
+`flow`, a phase the music speeds up but can never make jump. So the
+detectors are tested against synthetic tracks instead of by ear, and every
+screensaver's trails, pipes and paths are a function of `flow` alone, with
+nothing remembered between frames.
 
-## Safety
+More: [architecture](docs/ARCHITECTURE.md) · [scenes](docs/SCENES.md) ·
+[testing](docs/TESTING.md) · [backlog](docs/BACKLOG.md)
 
-Full-screen flashes are limited to 3 per second (WCAG 2.3.1) by
-`FlashLimiter`; the limit can be lowered in `.env` but never raised.
+## Safety and privacy
+
+Full-screen flashes are limited to 3 per second (WCAG 2.3.1) and switched
+off entirely under the OS "reduce motion" setting. Audio never leaves the
+browser: there is no server, no analytics and no third-party request, and a
+strict Content-Security-Policy keeps it that way.

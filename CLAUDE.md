@@ -29,3 +29,8 @@
   stale, check Application → Service workers first.
 - Pushing `main` deploys to Pages after `verify`. The base path lives only in
   `vite.config.ts`; keep every other URL relative.
+- Measuring fps in the browser pane: a **background tab** ticks at ~1 fps
+  and a **hidden pane** at ~30. Front the tab and use `?debug` before
+  believing a number. Canvas readback returns zeros (no preserved buffer).
+- Switching git branches under a running dev server can make Vite restart
+  on its default port (5173); restart it if 5317 stops answering.

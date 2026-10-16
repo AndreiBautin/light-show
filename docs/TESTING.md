@@ -1,6 +1,8 @@
 # Testing
 
-`npm test` runs Vitest over `src/**/*.test.ts`.
+`npm test` runs Vitest over `src/**/*.test.ts` with v8 coverage. The pure
+modules (`src/analysis/`, `render/quality.ts` and the pure helpers in `ui/`)
+must stay above 95% lines and 85% branches or `verify` fails.
 
 ## What is tested, and why
 
@@ -23,6 +25,22 @@
   stability after a long stall (background tab).
 - **Config** (`config.test.ts`): typos fall back to defaults; the flash
   ceiling cannot be configured above 3.
+- **Pipeline** (`pipeline.test.ts`): the flash limit holds end to end against
+  kicks faster than it allows; a source change carries the picture on without
+  a jump; reduced motion slows everything and never flashes.
+- **Scene director** (`director.test.ts`): changes only on a drop after the
+  minimum run, or at the ceiling; swaps only at the bottom of the dip; a
+  change of mind mid-fade continues the dip rather than flashing back to the
+  old scene (a real bug this caught); auto off mid-fade; one scene.
+- **Resolution governor** (`quality.test.ts`): steps down when frames run
+  long, ignores a single hitch, climbs back only after a steady stretch.
+- **Uniform contract** (`renderer.test.ts`): the header's uniforms and the
+  uploaded `SCALARS` match, since a mismatch fails silently either way.
+- **Scenes** (`scenes.test.ts`): unique ids; no GLSL reserved word used as a
+  name (it shipped once, as a black screen).
+- **URLs, gestures, file checks** (`ui/*.test.ts`): an unknown `?scene=` is
+  no choice; a diagonal drag never changes scene; non-audio and oversized
+  files are refused before decoding.
 
 ## Deliberately not tested
 
