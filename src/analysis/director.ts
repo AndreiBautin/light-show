@@ -62,11 +62,27 @@ export class SceneDirector {
     return this.transition?.to ?? this.current;
   }
 
-  /** Fade to a specific scene. Ignored if it is already showing or on its way. */
+  /**
+   * Fade to a specific scene. Ignored if it is already showing or on its way.
+   * A change of mind mid-fade carries on from the current brightness rather
+   * than snapping back to full, which would flash the old scene.
+   */
   show(index: number, nowMs: number): void {
     const to = wrap(index, this.count);
     if (to === this.target) return;
-    this.transition = { startMs: nowMs, to };
+    const half = this.options.fadeMs / 2;
+    const brightness = this.brightnessAt(nowMs);
+    // Start the new dip as if it had already got down to this brightness.
+    this.transition = { startMs: nowMs - (1 - brightness) * half, to };
+  }
+
+  /** Brightness the current fade (if any) gives at nowMs, ignoring scene swaps. */
+  private brightnessAt(nowMs: number): number {
+    if (!this.transition) return 1;
+    const half = this.options.fadeMs / 2;
+    const elapsed = nowMs - this.transition.startMs;
+    if (elapsed < half) return 1 - elapsed / half;
+    return Math.min(1, (elapsed - half) / half);
   }
 
   /** Fade to the scene `step` places along from the current target. */

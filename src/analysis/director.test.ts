@@ -72,4 +72,43 @@ describe('SceneDirector', () => {
     const frames = run(d, 5410, 5800, 5500);
     expect(frames.at(-1)?.scene).toBe(1);
   });
+
+  it('retargets a fade already under way without a second dip', () => {
+    const d = new SceneDirector(4, 0, OPTS);
+    d.show(1, 0);
+    let prev = d.feed(50, false); // halfway down
+    d.show(3, 60);
+    let lowest = prev.brightness;
+    const seen = new Set([prev.scene]);
+    for (let t = 60; t <= 400; t += 10) {
+      const f = d.feed(t, false);
+      // Still heading down: no frame may brighten before the swap.
+      if (f.scene === 0) expect(f.brightness).toBeLessThanOrEqual(prev.brightness);
+      lowest = Math.min(lowest, f.brightness);
+      seen.add(f.scene);
+      prev = f;
+    }
+    // Lands on the newest choice and never shows scene 1 at all.
+    expect(prev).toEqual({ scene: 3, brightness: 1 });
+    expect(seen.has(1)).toBe(false);
+    expect(lowest).toBeLessThan(0.1);
+  });
+
+  it('finishes a fade that started in auto even if auto is turned off', () => {
+    const d = new SceneDirector(3, 0, OPTS);
+    run(d, 0, 5010); // the ceiling starts a fade to scene 1
+    d.setAuto(false);
+    expect(run(d, 5020, 5400).at(-1)).toEqual({ scene: 1, brightness: 1 });
+  });
+
+  it('with a single scene never fades, whatever happens', () => {
+    const d = new SceneDirector(1, 0, OPTS);
+    d.step(1, 0);
+    const frames = run(d, 0, 20_000, 3000);
+    expect(frames.every((f) => f.scene === 0 && f.brightness === 1)).toBe(true);
+  });
+
+  it('refuses to be built with no scenes', () => {
+    expect(() => new SceneDirector(0)).toThrow();
+  });
 });
