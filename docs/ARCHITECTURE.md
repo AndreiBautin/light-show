@@ -8,7 +8,7 @@ there are no further layers.
 | --------------- | ----------------------------------------------------------------------------------------- | ---------------------- |
 | `src/analysis/` | Bands, beat detection, flash limiter, show state. Pure.                                   | nothing outside itself |
 | `src/audio/`    | Web Audio: mic, file, demo synth → spectra                                                | —                      |
-| `src/render/`   | WebGL2 renderer and the fragment shader                                                   | `analysis` types       |
+| `src/render/`   | WebGL2 renderer, scene and post shaders                                                   | `analysis` types       |
 | `src/platform/` | Clock, config, logger: the only homes for `performance.now`, `import.meta.env`, `console` | —                      |
 | `src/main.ts`   | Composition root and UI wiring                                                            | everything             |
 
@@ -34,4 +34,6 @@ The rules are in `eslint.config.js`, each with a message saying why.
    jumps.
 8. `render/renderer.ts` `draw()` uploads the state as uniforms (the `SCALARS`
    table maps each to its field);
-   `render/scene.frag.ts` paints the field.
+   `render/scene.frag.ts` draws the shapes as linear HDR into a float target,
+   and `render/post.frag.ts` builds a bloom mip chain from it and tonemaps to
+   the screen.

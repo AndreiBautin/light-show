@@ -2,13 +2,11 @@
 
 Abstract light that moves with your music, in the browser. Play the built-in
 demo track (silent: it only drives the visuals), listen through the
-microphone, or drop in a file. You stand inside a dark-blue cyberpunk lava
-lamp — ribbed glass, neon rings, a wet reflective floor — while glowing wax
-blobs rise, merge and wander through it, each layer played by a different part
-of the music: big electric-blue blobs by the bass, cyan-to-magenta blobs by
-chords and vocals (riding higher and pinker with the melody), dust in the air
-by the hats. The
-song's structure shapes the whole picture: quiet intros stay sparse and dim,
+microphone, or drop in a file. It is an old-school "Mystify" screensaver in
+3D: neon wireframe shapes bounce and tumble on pure black, each trailing
+fading echoes, with bloom. The bass sizes the big shape, the mids lengthen the
+trails, the hats send sparks along the lines, and the melody shifts the hue
+from cyan toward magenta. The song's structure shapes the whole picture: quiet intros stay sparse and dim,
 builds draw everything to the centre, drops release it outward, breakdowns
 empty out. The beat itself has no effect of its own.
 
