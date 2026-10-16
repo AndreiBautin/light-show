@@ -24,3 +24,8 @@
   constants) goes outside the inner loops.
 - Browser-pane screenshots can show a cropped frame when the pane is scaled;
   pin the viewport (`resize_window`) before judging layout.
+- **Service worker:** production only. `npm run preview` serves it on the dev
+  port; dev builds unregister it again on load. If the dev app ever looks
+  stale, check Application → Service workers first.
+- Pushing `main` deploys to Pages after `verify`. The base path lives only in
+  `vite.config.ts`; keep every other URL relative.

@@ -18,4 +18,13 @@ describe('parseConfig', () => {
     expect(parseConfig({ VITE_MAX_FLASHES_PER_SECOND: '0' }).config.maxFlashesPerSecond).toBe(1);
     expect(parseConfig({ VITE_MAX_FLASHES_PER_SECOND: 'lots' }).config.maxFlashesPerSecond).toBe(3);
   });
+
+  // The worker caches aggressively; registered in dev it would serve stale
+  // modules under hot reload, and nothing would say why.
+  it('registers the service worker only for a real production build', () => {
+    expect(parseConfig({ PROD: true }).config.serviceWorker).toBe(true);
+    expect(parseConfig({ PROD: false }).config.serviceWorker).toBe(false);
+    expect(parseConfig({ PROD: 'true' }).config.serviceWorker).toBe(false);
+    expect(parseConfig({}).config.serviceWorker).toBe(false);
+  });
 });

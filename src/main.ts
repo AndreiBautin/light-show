@@ -173,6 +173,25 @@ canvas.addEventListener('dblclick', () => {
   if (!document.fullscreenElement) void document.documentElement.requestFullscreen();
 });
 
+if (config.serviceWorker && 'serviceWorker' in navigator) {
+  // Relative, so it works under whatever path the site is served from.
+  navigator.serviceWorker.register('./sw.js').then(
+    () => {
+      log.info('pwa.worker_registered', {});
+    },
+    (err: unknown) => {
+      log.warn('pwa.worker_failed', { error: err instanceof Error ? err.name : 'unknown' });
+    },
+  );
+} else if ('serviceWorker' in navigator) {
+  // `npm run preview` shares the dev port, so a production worker can be left
+  // on this origin; its cache-first assets would serve stale dev modules.
+  void navigator.serviceWorker.getRegistrations().then(async (regs) => {
+    for (const reg of regs) await reg.unregister();
+    if (regs.length > 0) log.info('pwa.worker_removed', { count: regs.length });
+  });
+}
+
 try {
   const renderer = createRenderer(canvas, (scene, detail) => {
     // The first line of a GLSL info log is the error itself; no user content.

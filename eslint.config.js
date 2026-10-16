@@ -111,4 +111,14 @@ export default defineConfig(
     files: ['vite.config.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // The service worker is plain JS served as-is from public/: no type info,
+    // and it runs in a worker, not a page.
+    files: ['public/**/*.js'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.serviceworker,
+    },
+  },
 );

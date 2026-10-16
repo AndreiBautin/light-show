@@ -4,9 +4,18 @@ export interface Config {
   readonly logLevel: LogLevel;
   /** Upper bound on full-screen flashes per second. WCAG 2.3.1 allows at most 3. */
   readonly maxFlashesPerSecond: number;
+  /**
+   * Register the offline service worker. Production builds only: in dev it
+   * would cache modules and fight hot reload.
+   */
+  readonly serviceWorker: boolean;
 }
 
-export const DEFAULT_CONFIG: Config = { logLevel: 'info', maxFlashesPerSecond: 3 };
+export const DEFAULT_CONFIG: Config = {
+  logLevel: 'info',
+  maxFlashesPerSecond: 3,
+  serviceWorker: false,
+};
 
 export interface ParsedConfig {
   readonly config: Config;
@@ -40,7 +49,10 @@ export function parseConfig(env: Readonly<Record<string, unknown>>): ParsedConfi
     }
   }
 
-  return { config: { logLevel, maxFlashesPerSecond }, warnings };
+  // Vite sets PROD to a boolean itself; anything else means not a production build.
+  const serviceWorker = env.PROD === true;
+
+  return { config: { logLevel, maxFlashesPerSecond, serviceWorker }, warnings };
 }
 
 export function loadConfig(): ParsedConfig {
