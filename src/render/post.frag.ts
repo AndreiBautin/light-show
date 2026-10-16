@@ -68,6 +68,7 @@ uniform sampler2D uBloom;
 uniform vec2 uResolution;
 uniform float uBloomStrength;
 uniform float uFlow;
+uniform float uBrightness;
 out vec4 outColor;
 
 float hash(vec2 p) {
@@ -85,6 +86,7 @@ void main() {
   vec3 col = texture(uScene, uv).rgb;
   col += texture(uBloom, uv).rgb * uBloomStrength;
 
+  col *= uBrightness * uBrightness; // squared: the dip reads as an even fade
   col = aces(col * 1.3);
   col = pow(col, vec3(0.92));
   col += (hash(gl_FragCoord.xy + fract(uFlow * 7.0)) - 0.5) * 0.012;

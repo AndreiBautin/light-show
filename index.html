@@ -17,8 +17,13 @@
         <label class="file">Play a file<input id="file" type="file" accept="audio/*" /></label>
       </div>
       <p id="status" role="status"></p>
-      <p class="hint">F for fullscreen · H to hide this panel</p>
+      <div class="scenes-row">
+        <div id="scenes" class="scenes" aria-label="Screensaver"></div>
+        <button id="auto" type="button" class="auto">Auto: on</button>
+      </div>
+      <p class="hint">← → change screensaver · A auto · F fullscreen · H hide this panel</p>
     </main>
+    <div id="caption" aria-live="polite"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

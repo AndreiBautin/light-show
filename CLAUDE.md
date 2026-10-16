@@ -17,3 +17,10 @@
 - `erasableSyntaxOnly` is on: no TS parameter properties or enums.
 - The demo source in `audio/input.ts` exists so the show (and its checks)
   work without a microphone; keep it.
+- **New screensaver:** one file in `src/render/scenes/` built on
+  `SCENE_HEADER` (read its rules), registered in `scenes/index.ts`. Scenes
+  output linear HDR; `post.frag.ts` owns bloom and tonemapping. Keep each at
+  60 fps: anything costly per-pixel but constant per frame (hashes, random
+  constants) goes outside the inner loops.
+- Browser-pane screenshots can show a cropped frame when the pane is scaled;
+  pin the viewport (`resize_window`) before judging layout.

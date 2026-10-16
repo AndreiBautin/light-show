@@ -1,5 +1,7 @@
+import { SCENE_HEADER, type Scene } from './common';
+
 /**
- * "Mystify": an old-school screensaver, played by the music. Neon wireframe
+ * Echoes: the classic bouncing-polygon screensaver, played by the music. Neon wireframe
  * shapes bounce around an invisible box in 3D on pure black, each trailing a
  * fan of fading echoes of where it has just been. The box turns slowly, so
  * the shapes tumble in depth and nearer lines draw thicker and brighter.
@@ -16,33 +18,20 @@
  * Every vertex position is a function of uFlow, an integrated phase, so echoes
  * are just the same shape at an earlier flow and nothing ever jumps.
  */
-export const FRAGMENT_SHADER = /* glsl */ `#version 300 es
-precision highp float;
-
-uniform vec2 uResolution;
-uniform float uFlow;
-uniform float uBass;
-uniform float uMid;
-uniform float uTreble;
-uniform float uIntensity;
-uniform float uBuild;
-uniform float uRelease;
-uniform float uPitch;
-uniform float uFlash;
-
-out vec4 outColor;
-
+export const ECHOES: Scene = {
+  id: 'echoes',
+  name: 'Echoes',
+  fragment:
+    SCENE_HEADER +
+    /* glsl */ `
 const int SHAPES = 3;
 const int VERTS = 5;   // vertices per shape; edges join them in a loop
 const int ECHOES = 14;
 
-float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 
 // Triangle wave in -1..1: a point that bounces between two walls at constant speed.
 float bounce(float x) { return abs(fract(x) - 0.5) * 4.0 - 1.0; }
 
-mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c, 0, -s, 0, 1, 0, s, 0, c); }
-mat3 rotX(float a) { float c = cos(a), s = sin(a); return mat3(1, 0, 0, 0, c, s, 0, -s, c); }
 
 // Each vertex's bounce speed and starting phase, filled once per pixel:
 // the echo loop reads them hundreds of times.
@@ -77,21 +66,8 @@ vec3 project(vec3 p, mat3 view) {
   return vec3(q.xy * 1.85 / q.z, q.z);
 }
 
-// Distance from p to segment ab, and where along it (0..1) the closest point is.
-vec2 segment(vec2 p, vec2 a, vec2 b) {
-  vec2 pa = p - a;
-  vec2 ba = b - a;
-  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
-  return vec2(length(pa - ba * h), h);
-}
-
 vec3 shapeColour(int shape) {
-  vec3 cyan = vec3(0.05, 0.75, 1.0);
-  vec3 blue = vec3(0.12, 0.25, 1.0);
-  vec3 magenta = vec3(0.95, 0.12, 0.85);
-  float lean = uPitch + (float(shape) - 1.0) * 0.3;
-  vec3 c = mix(cyan, blue, smoothstep(0.0, 0.5, lean));
-  return mix(c, magenta, smoothstep(0.5, 1.0, lean));
+  return neon(uPitch + (float(shape) - 1.0) * 0.3);
 }
 
 void main() {
@@ -143,4 +119,5 @@ void main() {
   // Linear HDR out; post.frag.ts adds the bloom and tonemaps.
   outColor = vec4(col, 1.0);
 }
-`;
+`,
+};

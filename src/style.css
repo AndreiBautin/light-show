@@ -65,3 +65,39 @@ button:hover,
 #status:empty {
   display: none;
 }
+.scenes-row {
+  margin: 16px 0 4px;
+  padding-top: 16px;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+.scenes {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.scenes button,
+.auto {
+  padding: 6px 12px;
+  font-size: 0.9em;
+}
+button.active {
+  border-color: rgb(80 200 255 / 80%);
+  background: rgb(80 200 255 / 18%);
+}
+#caption {
+  position: fixed;
+  left: 32px;
+  bottom: 28px;
+  font-size: 0.85em;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgb(160 220 255 / 85%);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+#caption.visible {
+  opacity: 1;
+}

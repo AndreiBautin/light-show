@@ -32,8 +32,11 @@ The rules are in `eslint.config.js`, each with a message saying why.
 7. `analysis/show.ts` `stepShow()` folds all of it into `ShowState`: slow
    envelopes and an integrated `flow` phase that music speeds up but never
    jumps.
-8. `render/renderer.ts` `draw()` uploads the state as uniforms (the `SCALARS`
+8. `analysis/director.ts` `SceneDirector.feed()` picks the screensaver and a
+   fade brightness: auto mode moves on at a drop once a scene has played
+   40 s (or after 120 s regardless), dipping through black to swap.
+9. `render/renderer.ts` `draw()` uploads the state as uniforms (the `SCALARS`
    table maps each to its field);
-   `render/scene.frag.ts` draws the shapes as linear HDR into a float target,
+   the chosen screensaver (`render/scenes/`) draws as linear HDR into a float target,
    and `render/post.frag.ts` builds a bloom mip chain from it and tonemaps to
    the screen.

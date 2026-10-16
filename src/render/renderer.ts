@@ -1,6 +1,6 @@
 import type { ShowState } from '../analysis/show';
 import { COMPOSITE_SHADER, DOWNSAMPLE_SHADER, UPSAMPLE_SHADER } from './post.frag';
-import { FRAGMENT_SHADER } from './scene.frag';
+import { SCENES } from './scenes';
 
 // A single oversized triangle covers the screen with no seam down the diagonal.
 const VERTEX_SHADER = /* glsl */ `#version 300 es
@@ -23,7 +23,8 @@ const SCALARS = {
 type ScalarName = keyof typeof SCALARS;
 
 export interface Renderer {
-  draw(state: ShowState): void;
+  /** Draw one frame of scene `scene` (an index into SCENES), dimmed by `brightness` 0..1. */
+  draw(state: ShowState, scene: number, brightness: number): void;
 }
 
 function compile(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
@@ -99,19 +100,24 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   }
   gl.bindVertexArray(gl.createVertexArray());
 
-  const scene = link(gl, FRAGMENT_SHADER);
+  // Every scene compiles up front, so switching never stalls mid-show.
+  const scenes = SCENES.map((s) => {
+    const program = link(gl, s.fragment);
+    const names = Object.keys(SCALARS) as ScalarName[];
+    return {
+      program: program.program,
+      resolution: program.uniform('uResolution'),
+      scalars: names.map((name) => [program.uniform(name), SCALARS[name]] as const),
+    };
+  });
   const down = link(gl, DOWNSAMPLE_SHADER);
   const up = link(gl, UPSAMPLE_SHADER);
   const composite = link(gl, COMPOSITE_SHADER);
 
-  const sceneResolution = scene.uniform('uResolution');
-  const names = Object.keys(SCALARS) as ScalarName[];
-  const sceneScalars = names.map((name) => [scene.uniform(name), SCALARS[name]] as const);
-
   let sceneTarget: Target | undefined;
   let mips: Target[] = [];
 
-  // Render at CSS-pixel resolution: the raymarched room is too costly at native density.
+  // Render at CSS-pixel resolution: some scenes are too costly at native density.
   const resize = (): void => {
     const scale = Math.min(window.devicePixelRatio, 1);
     const w = Math.max(1, Math.floor(canvas.clientWidth * scale));
@@ -144,14 +150,15 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   };
 
   return {
-    draw(state) {
+    draw(state, sceneIndex, brightness) {
       resize();
-      if (!sceneTarget) return;
+      const scene = scenes[sceneIndex];
+      if (!sceneTarget || !scene) return;
       const src = sceneTarget;
 
       gl.useProgram(scene.program);
-      gl.uniform2f(sceneResolution, src.width, src.height);
-      for (const [location, read] of sceneScalars) gl.uniform1f(location, read(state));
+      gl.uniform2f(scene.resolution, src.width, src.height);
+      for (const [location, read] of scene.scalars) gl.uniform1f(location, read(state));
       drawInto(src, src.width, src.height);
 
       // Bloom: threshold into the first mip, then halve down the chain...
@@ -194,6 +201,7 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
       gl.uniform2f(composite.uniform('uResolution'), canvas.width, canvas.height);
       gl.uniform1f(composite.uniform('uBloomStrength'), POST.bloomStrength / POST.bloomMips);
       gl.uniform1f(composite.uniform('uFlow'), state.flow);
+      gl.uniform1f(composite.uniform('uBrightness'), brightness);
       drawInto(null, canvas.width, canvas.height);
     },
   };
