@@ -96,7 +96,7 @@ function frame(renderer: Renderer): void {
   const now = browserClock();
   const frameMs = lastFrameMs === undefined ? 0 : now - lastFrameMs;
   lastFrameMs = now;
-  const scale = governor.feed(frameMs);
+  const scale = document.hidden ? governor.scale : governor.feed(frameMs);
   const { show, drop } = pipeline.feed(
     now,
     input && {

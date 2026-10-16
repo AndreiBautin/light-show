@@ -47,8 +47,9 @@ export class ResolutionGovernor {
   /** Feed the time since the previous frame; returns the scale to render at. */
   feed(frameMs: number): number {
     const o = this.options;
-    // A backgrounded tab or a debugger pause is not the GPU struggling.
-    if (frameMs <= 0 || frameMs > 250) return this.current;
+    // A debugger pause or a tab switch is not the GPU struggling. The caller
+    // also stops feeding while the page is hidden (background tabs tick at ~1 Hz).
+    if (frameMs <= 0 || frameMs > 1000) return this.current;
     this.smoothed = this.smoothed === undefined ? frameMs : this.smoothed * 0.9 + frameMs * 0.1;
 
     if (this.smoothed > o.slowMs) {

@@ -18,6 +18,11 @@ describe('ResolutionGovernor', () => {
     expect(run(g, 50, 30_000)).toBe(DEFAULT_GOVERNOR.min);
   });
 
+  // A GPU managing only a few frames a second is the case that needs help most.
+  it('still steps down when frames are very slow', () => {
+    expect(run(new ResolutionGovernor(), 400, 10_000)).toBeLessThan(1);
+  });
+
   // Silently wrong if broken: a single hitch (GC, tab switch) would cost
   // resolution for the next eight seconds.
   it('ignores a brief hitch and a backgrounded tab', () => {
