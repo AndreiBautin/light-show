@@ -47,5 +47,23 @@ export default defineConfig(({ mode }) => ({
   plugins: [securityHeaders()],
   server: { port: PORT, strictPort: true },
   preview: { port: PORT, strictPort: true },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    coverage: {
+      provider: 'v8',
+      // The floor applies to the pure modules: where the decisions are, and
+      // where a test can say something without a browser. Adapters and
+      // shaders are judged by eye (docs/TESTING.md says why).
+      include: [
+        'src/analysis/**/*.ts',
+        'src/render/quality.ts',
+        'src/ui/scene-url.ts',
+        'src/ui/gesture.ts',
+        'src/ui/file-check.ts',
+      ],
+      exclude: ['**/*.test.ts'],
+      thresholds: { lines: 95, statements: 95, functions: 90, branches: 85 },
+    },
+  },
 }));
