@@ -101,3 +101,13 @@ button.active {
 #caption.visible {
   opacity: 1;
 }
+#hud {
+  position: fixed;
+  right: 12px;
+  top: 10px;
+  font:
+    12px ui-monospace,
+    monospace;
+  color: rgb(160 220 255 / 80%);
+  pointer-events: none;
+}

@@ -5,58 +5,45 @@ const quiet = { bass: 0, mid: 0, treble: 0 };
 const calm = { intensity: 0, build: 0, release: 0 };
 
 describe('stepShow', () => {
-  it('only flashes when the limiter allowed it, but always pulses on a beat', () => {
+  it('flashes only when the limiter allowed it', () => {
     const denied = stepShow(INITIAL_SHOW, {
       timeMs: 16,
       bands: quiet,
-      beat: true,
       flashAllowed: false,
       structure: calm,
       pitch: undefined,
     });
-    expect(denied.pulse).toBe(1);
     expect(denied.flash).toBe(0);
-    expect(denied.beats).toBe(1);
   });
 
-  it('decays the pulse between beats', () => {
+  it('lets a flash die away within a few frames', () => {
     const hit = stepShow(INITIAL_SHOW, {
       timeMs: 0,
       bands: quiet,
-      beat: true,
       flashAllowed: true,
       structure: calm,
       pitch: undefined,
     });
-    const mid = stepShow(hit, {
-      timeMs: 70,
+    const later = stepShow(hit, {
+      timeMs: 90,
       bands: quiet,
-      beat: false,
       flashAllowed: false,
       structure: calm,
       pitch: undefined,
     });
-    const later = stepShow(mid, {
-      timeMs: 140,
-      bands: quiet,
-      beat: false,
-      flashAllowed: false,
-      structure: calm,
-      pitch: undefined,
-    });
-    expect(later.pulse).toBeCloseTo(Math.pow(0.5, 140 / 350), 5);
+    expect(hit.flash).toBe(1);
+    expect(later.flash).toBeLessThan(0.4);
   });
 
   it('survives a long stall (tab in background) without blowing up', () => {
     const s = stepShow(INITIAL_SHOW, {
       timeMs: 60_000,
       bands: { bass: 1, mid: 1, treble: 1 },
-      beat: false,
       flashAllowed: false,
       structure: calm,
       pitch: undefined,
     });
-    for (const v of [s.bass, s.mid, s.treble, s.pulse, s.flash]) {
+    for (const v of [s.bass, s.mid, s.treble, s.flash]) {
       expect(v).toBeGreaterThanOrEqual(0);
       expect(v).toBeLessThanOrEqual(1);
     }
@@ -75,7 +62,6 @@ describe('flow', () => {
       const next = stepShow(s, {
         timeMs: t,
         bands: { bass: level, mid: level, treble: level },
-        beat: false,
         flashAllowed: false,
         structure: calm,
         pitch: undefined,

@@ -70,15 +70,51 @@ export default defineConfig(
     },
   },
   {
-    files: ['src/render/**/*.ts', 'src/audio/**/*.ts'],
+    files: ['src/render/**/*.ts', 'src/audio/**/*.ts', 'src/ui/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
             {
-              group: ['../main'],
+              group: ['../main', '../../main'],
               message: 'Adapters must not depend on the composition root.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // UI wiring knows the page, not the GPU or the audio graph: main connects them.
+    files: ['src/ui/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../main', '../render/*', '../audio/*'],
+              message: 'ui/ talks to the page only; main.ts wires it to render and audio.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // A scene is a shader and its notes. It builds on ./common and nothing else,
+    // so scenes stay independent and any one can be deleted without fallout.
+    files: ['src/render/scenes/**/*.ts'],
+    ignores: ['src/render/scenes/**/*.test.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['../*', '../../*'],
+              message: 'Scenes import only ./common (and index.ts the scenes).',
             },
           ],
         },

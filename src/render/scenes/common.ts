@@ -25,6 +25,11 @@ uniform float uFlash;
 out vec4 outColor;
 
 float hash(float n) { return fract(sin(n * 127.1) * 43758.5453); }
+// Integer hash: much cheaper than the sin() hash inside long loops.
+float ihash(uint x) {
+  x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
+  return float(x) / 4294967295.0;
+}
 float hash2(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
   p += dot(p, p + 45.32);

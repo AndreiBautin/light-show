@@ -7,12 +7,8 @@ export interface ShowState {
   readonly bass: number;
   readonly mid: number;
   readonly treble: number;
-  /** Jumps to 1 on each beat and decays; drives the pulse. */
-  readonly pulse: number;
   /** Full-screen brightness kick; only set when the flash limiter allows. */
   readonly flash: number;
-  /** Count of beats so far; the scene uses it to step its palette. */
-  readonly beats: number;
   /**
    * Accumulated flow phase in seconds. Music changes its rate, never its value,
    * so motion can speed up or slow down but never jump. (Scaling absolute time
@@ -32,9 +28,7 @@ export const INITIAL_SHOW: ShowState = {
   bass: 0,
   mid: 0,
   treble: 0,
-  pulse: 0,
   flash: 0,
-  beats: 0,
   flow: 0,
   intensity: 0,
   build: 0,
@@ -45,8 +39,7 @@ export const INITIAL_SHOW: ShowState = {
 export interface FrameInput {
   readonly timeMs: number;
   readonly bands: Bands;
-  readonly beat: boolean;
-  /** Whether the flash limiter granted a flash on this beat. */
+  /** A beat landed this frame and the flash limiter granted a flash for it. */
   readonly flashAllowed: boolean;
   readonly structure: StructureReading;
   /** Undefined when there is too little tonal energy to judge. */
@@ -86,9 +79,7 @@ export function stepShow(prev: ShowState, input: FrameInput): ShowState {
     bass: envelope(prev.bass, input.bands.bass, dt, 900, 2200),
     mid: envelope(prev.mid, input.bands.mid, dt, 900, 2200),
     treble: envelope(prev.treble, input.bands.treble, dt, 600, 1500),
-    pulse: input.beat ? 1 : decay(prev.pulse, dt, 350),
-    flash: input.beat && input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
-    beats: prev.beats + (input.beat ? 1 : 0),
+    flash: input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
     flow: prev.flow + (dt / 1000) * flowRate(prev.mid, prev.release),
     intensity: envelope(prev.intensity, input.structure.intensity, dt, 800, 2500),
     build: input.structure.build,

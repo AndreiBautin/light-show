@@ -1,177 +1,138 @@
 // Composition root: the only file that wires adapters to the analysis core.
-import { computeBands } from './analysis/bands';
-import { BeatDetector } from './analysis/beat';
 import { SceneDirector } from './analysis/director';
-import { FlashLimiter } from './analysis/flash';
-import { tonalHeight } from './analysis/pitch';
-import { StructureTracker } from './analysis/structure';
-import { INITIAL_SHOW, stepShow, type ShowState } from './analysis/show';
+import { ShowPipeline } from './analysis/pipeline';
 import { openDemo, openFile, openMicrophone, type AudioInput } from './audio/input';
-import { createRenderer } from './render/renderer';
-import { SCENES } from './render/scenes';
 import { browserClock } from './platform/clock';
 import { loadConfig } from './platform/config';
 import { createLogger } from './platform/logger';
+import { ResolutionGovernor } from './render/quality';
+import { createRenderer, type Renderer } from './render/renderer';
+import { SCENES } from './render/scenes';
+import { bindControls } from './ui/controls';
+import { byId } from './ui/dom';
+import { createHud } from './ui/hud';
+import { createPanel, type SourceId } from './ui/panel';
+import { flagFromQuery, queryForScene, sceneFromQuery } from './ui/scene-url';
 
 const { config, warnings } = loadConfig();
 const log = createLogger(config.logLevel);
 for (const w of warnings) log.warn('config.fallback', { detail: w });
 
-function byId<T extends HTMLElement>(id: string, type: new () => T): T {
-  const el = document.getElementById(id);
-  if (!(el instanceof type)) throw new Error(`missing #${id}`);
-  return el;
-}
-
 const canvas = byId('stage', HTMLCanvasElement);
-const intro = byId('intro', HTMLElement);
-const status = byId('status', HTMLElement);
-const micButton = byId('mic', HTMLButtonElement);
-const demoButton = byId('demo', HTMLButtonElement);
-const fileInput = byId('file', HTMLInputElement);
-const picker = byId('scenes', HTMLElement);
-const autoButton = byId('auto', HTMLButtonElement);
-const caption = byId('caption', HTMLElement);
+const pipeline = new ShowPipeline(config.maxFlashesPerSecond);
+const governor = new ResolutionGovernor();
+const hud = createHud(flagFromQuery(window.location.search, 'debug'));
 
-// A scene named in the URL (?scene=pipes) is a choice: show it and stay on it.
-const requested = new URLSearchParams(window.location.search).get('scene');
-const requestedIndex = SCENES.findIndex((s) => s.id === requested);
-const director = new SceneDirector(SCENES.length, Math.max(0, requestedIndex));
-if (requestedIndex >= 0) director.setAuto(false);
+// A scene named in the URL is a choice: show it and stay on it.
+const requested = sceneFromQuery(
+  window.location.search,
+  SCENES.map((s) => s.id),
+);
+const director = new SceneDirector(SCENES.length, requested ?? 0);
+if (requested !== undefined) director.setAuto(false);
+
+let input: AudioInput | undefined;
 let shownScene = -1;
-let captionTimer: number | undefined;
+let lastFrameMs: number | undefined;
 
-const sceneButtons = SCENES.map((scene, i) => {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.textContent = scene.name;
-  button.addEventListener('click', () => {
-    pick(i);
-  });
-  picker.append(button);
-  return button;
-});
+const panel = createPanel(
+  SCENES.map((s) => s.name),
+  {
+    onSource: (source, file) => {
+      void start(source, file);
+    },
+    onPick: pick,
+    onToggleAuto: toggleAuto,
+  },
+);
 
 function pick(index: number): void {
   director.setAuto(false);
   director.show(index, browserClock());
-  syncPicker();
+  syncChoice();
 }
 
-function syncPicker(): void {
-  sceneButtons.forEach((b, i) => b.classList.toggle('active', i === director.target));
-  autoButton.classList.toggle('active', director.auto);
-  autoButton.textContent = director.auto ? 'Auto: on' : 'Auto: off';
-  // The URL names a scene only while one is picked, so it is a link to that
-  // scene; in auto mode it stays bare so a reload keeps cycling.
-  const url = new URL(window.location.href);
-  const target = SCENES[director.target];
-  if (director.auto || !target) url.searchParams.delete('scene');
-  else url.searchParams.set('scene', target.id);
-  window.history.replaceState(null, '', url);
-}
-
-function sceneShown(index: number): void {
-  const scene = SCENES[index];
-  if (!scene) return;
-  shownScene = index;
-  caption.textContent = scene.name;
-  caption.classList.add('visible');
-  window.clearTimeout(captionTimer);
-  captionTimer = window.setTimeout(() => {
-    caption.classList.remove('visible');
-  }, 2500);
-  syncPicker();
-}
-
-autoButton.addEventListener('click', () => {
+function toggleAuto(): void {
   director.setAuto(!director.auto);
-  syncPicker();
+  syncChoice();
+}
+
+function syncChoice(): void {
+  panel.sync(director.target, director.auto);
+  const id = director.auto ? undefined : SCENES[director.target]?.id;
+  const query = queryForScene(window.location.search, id);
+  window.history.replaceState(null, '', `${window.location.pathname}${query}`);
+}
+
+bindControls(canvas, {
+  step: (direction) => {
+    pick(director.target + direction);
+  },
+  toggleAuto,
+  togglePanel: () => {
+    panel.toggle();
+  },
 });
-syncPicker();
+syncChoice();
 
-let input: AudioInput | undefined;
-let beats = new BeatDetector();
-let structure = new StructureTracker();
-let flashes = new FlashLimiter(config.maxFlashesPerSecond);
-let show: ShowState = INITIAL_SHOW;
-
-const SILENT = { bass: 0, mid: 0, treble: 0 };
-
-function frame(renderer: ReturnType<typeof createRenderer>): void {
+function frame(renderer: Renderer): void {
   const now = browserClock();
-  let bands = SILENT;
-  let beat = false;
-  let pitch: number | undefined;
-  if (input) {
-    const spectrum = input.readSpectrum();
-    bands = computeBands(spectrum, input.sampleRate, input.fftSize);
-    beat = beats.feed(now, bands.bass);
-    pitch = tonalHeight(spectrum, input.sampleRate, input.fftSize);
+  const frameMs = lastFrameMs === undefined ? 0 : now - lastFrameMs;
+  lastFrameMs = now;
+  const scale = governor.feed(frameMs);
+  const { show, drop } = pipeline.feed(
+    now,
+    input && {
+      spectrum: input.readSpectrum(),
+      sampleRate: input.sampleRate,
+      fftSize: input.fftSize,
+    },
+  );
+  if (drop) log.debug('show.drop', { atMs: Math.round(now) });
+  const cut = director.feed(now, drop);
+  if (cut.scene !== shownScene) {
+    shownScene = cut.scene;
+    panel.caption(SCENES[cut.scene]?.name ?? '');
+    syncChoice();
   }
-  const energy = 0.5 * bands.bass + 0.35 * bands.mid + 0.15 * bands.treble;
-  const reading = structure.feed(now, energy);
-  if (reading.release === 1) log.debug('show.drop', { atMs: Math.round(now) });
-  const flashAllowed = beat && flashes.tryFlash(now);
-  show = stepShow(show, { timeMs: now, bands, beat, flashAllowed, structure: reading, pitch });
-  const cut = director.feed(now, reading.release === 1);
-  if (cut.scene !== shownScene) sceneShown(cut.scene);
-  renderer.draw(show, cut.scene, cut.brightness);
+  renderer.draw(show, cut.scene, cut.brightness, scale);
+  hud.frame(frameMs, scale, SCENES[cut.scene]?.id ?? '');
   requestAnimationFrame(() => {
     frame(renderer);
   });
 }
 
-async function start(open: () => Promise<AudioInput>, source: string): Promise<void> {
+function open(source: SourceId, file: File | undefined): Promise<AudioInput> {
+  switch (source) {
+    case 'demo':
+      return openDemo();
+    case 'mic':
+      return openMicrophone();
+    case 'file':
+      return file ? openFile(file) : Promise.reject(new Error('no file'));
+  }
+}
+
+async function start(source: SourceId, file?: File): Promise<void> {
   input?.stop();
   input = undefined;
-  status.textContent = 'Starting…';
+  panel.setStatus('Starting…');
   try {
-    input = await open();
-    beats = new BeatDetector();
-    structure = new StructureTracker();
-    flashes = new FlashLimiter(config.maxFlashesPerSecond);
-    status.textContent = '';
-    intro.classList.add('hidden');
+    input = await open(source, file);
+    pipeline.newSource();
+    panel.setStatus('');
+    panel.setOpen(false);
     log.info('audio.started', { source, sampleRate: input.sampleRate });
   } catch (err) {
     const name = err instanceof Error ? err.name : 'unknown';
     log.warn('audio.failed', { source, error: name });
-    status.textContent =
+    panel.setStatus(
       name === 'NotAllowedError'
         ? 'Microphone permission was declined. Allow it in the browser, or play a file instead.'
-        : 'Could not start audio. Try another file, or the microphone.';
+        : 'Could not start audio. Try another file, or the microphone.',
+    );
   }
 }
-
-micButton.addEventListener('click', () => {
-  void start(openMicrophone, 'mic');
-});
-demoButton.addEventListener('click', () => {
-  void start(openDemo, 'demo');
-});
-fileInput.addEventListener('change', () => {
-  const file = fileInput.files?.[0];
-  if (file) void start(() => openFile(file), 'file');
-  fileInput.value = '';
-});
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'f' || e.key === 'F') {
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen();
-  } else if (e.key === 'h' || e.key === 'H') {
-    intro.classList.toggle('hidden');
-  } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-    pick(director.target + (e.key === 'ArrowRight' ? 1 : -1));
-  } else if (e.key === 'a' || e.key === 'A') {
-    director.setAuto(!director.auto);
-    syncPicker();
-  }
-});
-canvas.addEventListener('dblclick', () => {
-  if (!document.fullscreenElement) void document.documentElement.requestFullscreen();
-});
 
 if (config.serviceWorker && 'serviceWorker' in navigator) {
   // Relative, so it works under whatever path the site is served from.
@@ -200,5 +161,5 @@ try {
   frame(renderer);
 } catch (err) {
   log.error('render.unavailable', { error: err instanceof Error ? err.message : 'unknown' });
-  status.textContent = 'This browser cannot run the visuals (WebGL2 is unavailable).';
+  panel.setStatus('This browser cannot run the visuals (WebGL2 is unavailable).');
 }

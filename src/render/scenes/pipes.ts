@@ -36,12 +36,6 @@ vec3 axisDir(int i) {
   return vec3(0, 0, -1);
 }
 
-// Integer hash: far cheaper than the sin() hash in the inner walk loop.
-float ihash(uint x) {
-  x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
-  return float(x) / 4294967295.0;
-}
-
 float bestZ;
 vec3 hitN;
 float hitAlong;

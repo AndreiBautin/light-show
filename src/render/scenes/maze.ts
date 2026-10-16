@@ -25,11 +25,6 @@ const int LEG = 4;
 const int BEHIND = 2;
 const int WINDOW = 9;
 
-float ihash(uint x) {
-  x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
-  return float(x) / 4294967295.0;
-}
-
 int firstLeg;
 vec2 legStart[WINDOW];
 vec2 legDir[WINDOW];
