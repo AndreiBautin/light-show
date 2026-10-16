@@ -174,9 +174,12 @@ canvas.addEventListener('dblclick', () => {
 });
 
 try {
-  const renderer = createRenderer(canvas);
+  const renderer = createRenderer(canvas, (scene, detail) => {
+    // The first line of a GLSL info log is the error itself; no user content.
+    log.error('render.scene_failed', { scene, detail: detail.split('\n')[0] ?? '' });
+  });
   frame(renderer);
 } catch (err) {
-  log.error('render.unavailable', { error: err instanceof Error ? err.name : 'unknown' });
+  log.error('render.unavailable', { error: err instanceof Error ? err.message : 'unknown' });
   status.textContent = 'This browser cannot run the visuals (WebGL2 is unavailable).';
 }

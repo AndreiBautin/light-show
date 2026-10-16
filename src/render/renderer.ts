@@ -92,7 +92,10 @@ function deleteTarget(gl: WebGL2RenderingContext, target: Target): void {
  * Three stages per frame: the scene into an HDR target, a bloom mip chain
  * built from it, and a composite to the screen that adds the bloom and tonemaps.
  */
-export function createRenderer(canvas: HTMLCanvasElement): Renderer {
+export function createRenderer(
+  canvas: HTMLCanvasElement,
+  onSceneFailed: (sceneId: string, detail: string) => void,
+): Renderer {
   const gl = canvas.getContext('webgl2', { antialias: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('WebGL2 is not available');
   if (!gl.getExtension('EXT_color_buffer_float')) {
@@ -100,15 +103,21 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   }
   gl.bindVertexArray(gl.createVertexArray());
 
-  // Every scene compiles up front, so switching never stalls mid-show.
+  // Every scene compiles up front, so switching never stalls mid-show. One
+  // that fails is reported and drawn as black; it must not take the others down.
   const scenes = SCENES.map((s) => {
-    const program = link(gl, s.fragment);
-    const names = Object.keys(SCALARS) as ScalarName[];
-    return {
-      program: program.program,
-      resolution: program.uniform('uResolution'),
-      scalars: names.map((name) => [program.uniform(name), SCALARS[name]] as const),
-    };
+    try {
+      const program = link(gl, s.fragment);
+      const names = Object.keys(SCALARS) as ScalarName[];
+      return {
+        program: program.program,
+        resolution: program.uniform('uResolution'),
+        scalars: names.map((name) => [program.uniform(name), SCALARS[name]] as const),
+      };
+    } catch (err) {
+      onSceneFailed(s.id, err instanceof Error ? err.message : 'unknown');
+      return undefined;
+    }
   });
   const down = link(gl, DOWNSAMPLE_SHADER);
   const up = link(gl, UPSAMPLE_SHADER);
@@ -153,13 +162,19 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
     draw(state, sceneIndex, brightness) {
       resize();
       const scene = scenes[sceneIndex];
-      if (!sceneTarget || !scene) return;
+      if (!sceneTarget) return;
       const src = sceneTarget;
 
-      gl.useProgram(scene.program);
-      gl.uniform2f(scene.resolution, src.width, src.height);
-      for (const [location, read] of scene.scalars) gl.uniform1f(location, read(state));
-      drawInto(src, src.width, src.height);
+      if (scene) {
+        gl.useProgram(scene.program);
+        gl.uniform2f(scene.resolution, src.width, src.height);
+        for (const [location, read] of scene.scalars) gl.uniform1f(location, read(state));
+        drawInto(src, src.width, src.height);
+      } else {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, src.framebuffer);
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
 
       // Bloom: threshold into the first mip, then halve down the chain...
       gl.useProgram(down.program);
