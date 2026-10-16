@@ -83,9 +83,9 @@ export function stepShow(prev: ShowState, input: FrameInput): ShowState {
   const dt = Math.min(100, Math.max(0, input.timeMs - prev.timeMs));
   return {
     timeMs: input.timeMs,
-    bass: envelope(prev.bass, input.bands.bass, dt, 250, 900),
-    mid: envelope(prev.mid, input.bands.mid, dt, 400, 1200),
-    treble: envelope(prev.treble, input.bands.treble, dt, 150, 600),
+    bass: envelope(prev.bass, input.bands.bass, dt, 900, 2200),
+    mid: envelope(prev.mid, input.bands.mid, dt, 900, 2200),
+    treble: envelope(prev.treble, input.bands.treble, dt, 600, 1500),
     pulse: input.beat ? 1 : decay(prev.pulse, dt, 350),
     flash: input.beat && input.flashAllowed ? 1 : decay(prev.flash, dt, 60),
     beats: prev.beats + (input.beat ? 1 : 0),

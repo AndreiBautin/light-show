@@ -1,16 +1,16 @@
 /**
- * "Deep Lamp": three layers of cool light drifting in the dark, each played by
- * a different part of the music.
+ * "Deep Lamp", in 3D: glossy blobs of light drifting through a dark volume,
+ * raymarched as a smooth-union field and seen by a camera that slowly orbits.
  *
- * - Bass layer: a few big, slow blobs that swell with the low end.
- * - Mid layer: medium blobs for chords and vocals. They rise with the melody's
- *   pitch and shade from teal (low) to violet (high).
- * - Treble layer: small bubbles that appear with hats and cymbals.
+ * - Bass layer: a few big, slow blobs at the back that swell with the low end.
+ * - Mid layer: smaller blobs nearer the camera for chords and vocals. They rise
+ *   with the melody's pitch and shade from teal (low) to violet (high).
+ * - Treble layer: dust motes on three depth planes, so they parallax as the
+ *   camera moves; more appear with hats and cymbals.
  *
- * Song structure shapes the whole picture: intensity sets how lit and full it
- * is, a build draws the blobs toward the centre, and a drop releases them
- * outward with a surge that fades over a few seconds. The beat itself has no
- * visual of its own.
+ * Nothing is tied to individual beats. Sizes follow slow band envelopes, and
+ * song structure shapes the whole picture: intensity sets how lit it is, a
+ * build draws the blobs together, and a drop releases them outward.
  *
  * Motion runs on uFlow, an integrated phase, so nothing ever jumps.
  */
@@ -36,113 +36,136 @@ float hash(vec2 p) {
   return fract(p.x * p.y);
 }
 
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x),
-             mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
-}
-
-float fbm(vec2 p) {
-  float v = 0.0;
-  float a = 0.5;
-  for (int i = 0; i < 4; i++) {
-    v += a * noise(p);
-    p *= 2.03;
-    a *= 0.5;
-  }
-  return v;
-}
-
-// Build pulls everything toward the centre; a drop throws it back out.
-vec2 gather(vec2 c) {
-  float g = 0.45 * uBuild - 0.55 * uRelease;
-  return c * (1.0 - g);
-}
-
-// A blob that rises, sways and wraps from top back to bottom.
-vec2 drifter(float seed, float t, float speed, float sway, float aspect) {
-  float y = mod(seed * 0.37 + t * speed, 1.8) - 0.9;
-  float x = (fract(seed * 0.731) - 0.5) * aspect * 0.85
-          + sway * sin(t * (0.10 + 0.03 * seed) + seed * 2.1);
-  return vec2(x, y);
-}
-
 const int BASS_BLOBS = 4;
 const int MID_BLOBS = 6;
+const int BLOBS = BASS_BLOBS + MID_BLOBS;
+
+vec4 blob[BLOBS]; // xyz centre, w radius
+
+// Build pulls everything toward the centre; a drop throws it back out.
+float gatherScale() {
+  return 1.0 - (0.4 * uBuild - 0.5 * uRelease);
+}
+
+// A blob that rises, sways in x and z, and wraps from top back to bottom.
+vec3 drifter(float seed, float t, float speed, float sway, float depth) {
+  float y = mod(seed * 0.37 + t * speed, 3.2) - 1.6;
+  float x = (fract(seed * 0.731) - 0.5) * 2.0 + sway * sin(t * (0.10 + 0.03 * seed) + seed * 2.1);
+  float z = depth + 0.5 * sin(t * (0.07 + 0.02 * seed) + seed * 4.3);
+  return vec3(x, y, z);
+}
+
+void placeBlobs(float t) {
+  float g = gatherScale();
+  for (int i = 0; i < BASS_BLOBS; i++) {
+    float fi = float(i) + 0.5;
+    vec3 c = drifter(fi, t, 0.05 + 0.02 * fract(fi * 0.618), 0.25, -0.6);
+    float r = (0.38 + 0.12 * fract(fi * 0.437)) * (0.75 + 0.45 * uBass);
+    blob[i] = vec4(c * g, r);
+  }
+  float lift = (uPitch - 0.5) * 1.0;
+  for (int i = 0; i < MID_BLOBS; i++) {
+    float fi = float(i) + 10.0;
+    vec3 c = drifter(fi, t, 0.08 + 0.04 * fract(fi * 0.618), 0.45, 0.4);
+    c.y = clamp(c.y + lift, -1.6, 1.6);
+    float r = (0.16 + 0.08 * fract(fi * 0.437)) * (0.6 + 0.7 * uMid);
+    blob[BASS_BLOBS + i] = vec4(c * g, r);
+  }
+}
+
+float smin(float a, float b, float k) {
+  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+  return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+// Distance, plus how much of the surface belongs to the mid layer (0 = bass).
+vec2 field(vec3 p) {
+  float bass = 1e3;
+  float mid = 1e3;
+  for (int i = 0; i < BASS_BLOBS; i++) bass = smin(bass, length(p - blob[i].xyz) - blob[i].w, 0.45);
+  for (int i = BASS_BLOBS; i < BLOBS; i++) mid = smin(mid, length(p - blob[i].xyz) - blob[i].w, 0.3);
+  float d = smin(bass, mid, 0.35);
+  float w = clamp(0.5 + 0.5 * (bass - mid) / 0.35, 0.0, 1.0);
+  return vec2(d, w);
+}
+
+vec3 normalAt(vec3 p) {
+  const vec2 k = vec2(1.0, -1.0) * 0.003;
+  return normalize(k.xyy * field(p + k.xyy).x + k.yyx * field(p + k.yyx).x
+                 + k.yxy * field(p + k.yxy).x + k.xxx * field(p + k.xxx).x);
+}
+
+// Motes on one depth plane, seen through the ray.
+float motes(vec3 ro, vec3 rd, float planeZ, float scale, float t) {
+  float s = (planeZ - ro.z) / rd.z;
+  if (s <= 0.0) return 0.0;
+  vec2 q = (ro + rd * s).xy * scale + vec2(0.0, -t * 0.35 * scale);
+  vec2 cell = floor(q);
+  vec2 f = fract(q) - 0.5;
+  float h = hash(cell + planeZ);
+  float show = step(h, 0.06 + 0.4 * uTreble);
+  vec2 jitter = (vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5) * 0.6;
+  float size = 0.06 + 0.06 * hash(cell + 1.3);
+  float twinkle = 0.6 + 0.4 * sin(t * 2.0 + h * 40.0);
+  return smoothstep(size, size * 0.3, length(f - jitter)) * show * twinkle;
+}
 
 void main() {
   vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y;
-  float aspect = uResolution.x / uResolution.y;
   float t = uFlow;
+  placeBlobs(t);
 
-  vec2 p = uv + 0.06 * vec2(fbm(uv * 2.0 + t * 0.15), fbm(uv * 2.0 - t * 0.12 + 5.0)) - 0.03;
+  // Camera: a slow, shallow orbit so depth reads without ever feeling like motion sickness.
+  float a = 0.35 * sin(t * 0.045);
+  vec3 ro = vec3(4.2 * sin(a), 0.25 * sin(t * 0.031), 4.2 * cos(a));
+  vec3 fw = normalize(-ro);
+  vec3 rt = normalize(cross(fw, vec3(0.0, 1.0, 0.0)));
+  vec3 up = cross(rt, fw);
+  vec3 rd = normalize(fw * 1.6 + rt * uv.x + up * uv.y);
 
-  // Bass layer.
-  float bassField = 0.0;
-  for (int i = 0; i < BASS_BLOBS; i++) {
-    float fi = float(i);
-    float r = (0.15 + 0.06 * fract(fi * 0.437)) * (0.65 + 0.55 * uBass);
-    vec2 c = gather(drifter(fi + 0.5, t, 0.025 + 0.01 * fract(fi * 0.618), 0.12, aspect));
-    vec2 d = p - c;
-    bassField += r * r / (dot(d, d) + 1e-4);
-  }
-
-  // Mid layer: lifted by pitch.
-  float midField = 0.0;
-  float lift = (uPitch - 0.5) * 0.6;
-  for (int i = 0; i < MID_BLOBS; i++) {
-    float fi = float(i) + 10.0;
-    float r = (0.07 + 0.04 * fract(fi * 0.437)) * (0.35 + 0.95 * uMid);
-    vec2 c = drifter(fi, t, 0.045 + 0.02 * fract(fi * 0.618), 0.22, aspect);
-    c.y = clamp(c.y + lift, -0.95, 0.95);
-    vec2 d = p - gather(c);
-    midField += r * r / (dot(d, d) + 1e-4);
-  }
-
-  // Colours. Intensity lifts brightness and saturation together.
   float lit = 0.45 + 0.55 * uIntensity;
-  vec3 bg = mix(vec3(0.008, 0.012, 0.032), vec3(0.018, 0.040, 0.080), smoothstep(0.6, -0.6, uv.y));
+  vec3 bg = mix(vec3(0.006, 0.010, 0.028), vec3(0.016, 0.036, 0.075), smoothstep(0.6, -0.6, uv.y));
   bg *= 0.8 + 0.5 * uIntensity;
+  vec3 col = bg;
+
+  // Treble motes behind the blobs.
+  col += vec3(0.45, 0.75, 1.0) * motes(ro, rd, -2.5, 3.0, t) * (0.05 + 0.25 * uTreble) * lit;
+
+  float s = 0.0;
+  float glow = 0.0;
+  vec2 hit = vec2(1e3, 0.0);
+  for (int i = 0; i < 64; i++) {
+    vec3 p = ro + rd * s;
+    hit = field(p);
+    glow += 0.012 / (0.04 + hit.x * hit.x);
+    if (hit.x < 0.002 || s > 9.0) break;
+    s += hit.x * 0.9;
+  }
 
   vec3 bassCol = vec3(0.03, 0.30, 0.42) * lit;
   vec3 midCol = mix(vec3(0.06, 0.48, 0.55), vec3(0.36, 0.20, 0.66), uPitch) * lit;
   vec3 rimCol = vec3(0.40, 0.65, 0.95);
 
-  vec3 col = bg;
+  if (hit.x < 0.01) {
+    vec3 p = ro + rd * s;
+    vec3 n = normalAt(p);
+    vec3 albedo = mix(bassCol, midCol, hit.y);
+    vec3 light = normalize(vec3(0.4, 0.8, 0.5));
+    float diff = 0.25 + 0.75 * max(dot(n, light), 0.0);
+    float fres = pow(1.0 - max(dot(n, -rd), 0.0), 3.0);
+    float spec = pow(max(dot(reflect(rd, n), light), 0.0), 40.0);
+    // Light seems to come from inside: thin edges glow, cores stay deep.
+    vec3 surf = albedo * diff * 0.9 + albedo * 0.35;
+    surf += rimCol * fres * (0.25 + 0.5 * uRelease) * lit;
+    surf += vec3(0.7, 0.85, 1.0) * spec * 0.35 * lit;
+    float fog = exp(-0.12 * max(s - 3.0, 0.0));
+    col = mix(col, surf, fog);
+  }
+  col += mix(bassCol, midCol, 0.5) * glow * 0.02;
 
-  float bBody = smoothstep(0.9, 1.25, bassField);
-  float bGlow = smoothstep(0.25, 1.0, bassField) * (1.0 - bBody);
-  float bCore = smoothstep(1.6, 4.0, bassField);
-  col += bassCol * bGlow * 0.5;
-  col = mix(col, bassCol, bBody);
-  col += bassCol * bCore * 0.6;
-
-  float mBody = smoothstep(0.9, 1.2, midField);
-  float mGlow = smoothstep(0.3, 1.0, midField) * (1.0 - mBody);
-  float mCore = smoothstep(1.6, 4.0, midField);
-  col += midCol * mGlow * 0.45;
-  col = mix(col, midCol * 0.9 + col * 0.25, mBody);
-  col += mix(midCol, rimCol, 0.4) * mCore * 0.5;
-
-  // Rim light on both layers; a drop brightens it and fades out with the release.
-  float rims = bBody * (1.0 - smoothstep(1.25, 1.7, bassField))
-             + mBody * (1.0 - smoothstep(1.2, 1.6, midField));
-  col += rimCol * rims * (0.10 + 0.35 * uRelease) * lit;
-
-  // Treble layer: bubbles rising faster than the blobs; more appear with more treble.
-  vec2 bp = uv * vec2(9.0, 9.0) + vec2(0.0, -t * 0.6);
-  vec2 cell = floor(bp);
-  vec2 f = fract(bp) - 0.5;
-  float h = hash(cell);
-  float show = step(h, 0.08 + 0.55 * uTreble);
-  vec2 jitter = (vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5) * 0.6;
-  jitter.x += 0.12 * sin(t * 1.3 + h * 6.28);
-  float size = 0.05 + 0.06 * hash(cell + 1.3);
-  float bubble = smoothstep(size, size * 0.4, length(f - jitter));
-  float twinkle = 0.6 + 0.4 * sin(t * 3.0 + h * 40.0);
-  col += vec3(0.45, 0.75, 1.0) * bubble * show * twinkle * (0.12 + 0.5 * uTreble) * lit;
+  // Nearer motes in front of the blobs.
+  col += vec3(0.45, 0.75, 1.0) * motes(ro, rd, 0.9, 5.0, t) * (0.04 + 0.25 * uTreble) * lit;
+  col += vec3(0.45, 0.75, 1.0) * motes(ro, rd, 2.2, 8.0, t) * (0.03 + 0.2 * uTreble) * lit;
 
   col *= 1.0 + 0.05 * uFlash;
 
