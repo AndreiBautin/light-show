@@ -73,6 +73,10 @@ export async function openFile(file: File): Promise<AudioInput> {
 /**
  * A synthesised 124 BPM track (intro, build, drop, breakdown) so the show can be tried
  * without a microphone or a file. Scheduled on the audio clock, a bar ahead.
+ *
+ * Silent: the analyser still sees the full signal, but the speakers get it
+ * through a zero gain. The graph must still reach the destination, or the
+ * browser stops pulling audio through the analyser.
  */
 export function openDemo(): Promise<AudioInput> {
   const ctx = new AudioContext();
@@ -80,7 +84,9 @@ export function openDemo(): Promise<AudioInput> {
   const out = ctx.createGain();
   out.gain.value = 0.6;
   out.connect(analyser);
-  analyser.connect(ctx.destination);
+  const mute = ctx.createGain();
+  mute.gain.value = 0;
+  analyser.connect(mute).connect(ctx.destination);
 
   const beat = 60 / 124;
   const noise = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
