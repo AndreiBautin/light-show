@@ -15,7 +15,7 @@ never strobes the screen.
 
 ## Use it
 
-Open the live link and pick a sound. **← →** change screensaver, **A** auto,
+No sign-up and nothing stored: open the live link and pick a sound. **← →** change screensaver, **A** auto,
 **F** fullscreen, **H** hide the panel; on a phone, swipe and tap.
 `?scene=pipes` links straight to one scene; `?debug` shows frame rate.
 
@@ -42,8 +42,24 @@ detectors are tested against synthetic tracks instead of by ear, and every
 screensaver's trails, pipes and paths are a function of `flow` alone, with
 nothing remembered between frames.
 
+## Built with, and why
+
+- **TypeScript, strict** — the analysis core is numeric code where a
+  mistyped unit is silent; strict mode and exhaustive switches catch it.
+- **Raw WebGL2 and GLSL, no engine** — every scene is one full-screen
+  shader; an engine would add weight without helping. The bundle is ~50 KB
+  with **no runtime dependencies**.
+- **Web Audio `AnalyserNode`** — the browser's FFT is fast and good enough;
+  everything after it is this repo's code.
+- **Vite, Vitest, ESLint** — fast builds and tests; lint enforces the
+  architecture's boundaries, not just style.
+- **GitHub Pages** — a static site needs nothing more, and deploys with no
+  extra account or secret.
+
 More: [architecture](docs/ARCHITECTURE.md) · [scenes](docs/SCENES.md) ·
-[testing](docs/TESTING.md) · [backlog](docs/BACKLOG.md)
+[testing](docs/TESTING.md) · [security](docs/SECURITY.md) ·
+[deployment](docs/DEPLOYMENT.md) · [interview guide](docs/INTERVIEW_GUIDE.md) ·
+[backlog](docs/BACKLOG.md)
 
 ## Safety and privacy
 
@@ -51,3 +67,7 @@ Full-screen flashes are limited to 3 per second (WCAG 2.3.1) and switched
 off entirely under the OS "reduce motion" setting. Audio never leaves the
 browser: there is no server, no analytics and no third-party request, and a
 strict Content-Security-Policy keeps it that way.
+
+## License
+
+[MIT](LICENSE).
