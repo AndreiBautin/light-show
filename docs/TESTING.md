@@ -26,9 +26,15 @@
 
 ## Deliberately not tested
 
-- **The shader and renderer.** Their output is judged by eye; a pixel test
-  would pin today's look and fail on every artistic change. A broken shader
-  fails loudly (compile error shown on screen).
+- **The shaders and renderer.** Their output is judged by eye; a pixel test
+  would pin today's look and fail on every artistic change. A scene that fails
+  to compile is logged (`render.scene_failed`) and drawn black while the rest
+  keep working. The one cheap static check that pays is in
+  `scenes/scenes.test.ts`: GLSL reserved words used as names, which shipped
+  once and only showed as a black screen.
+- **The service worker.** Verified by hand against a production build
+  (registered, controlling, renders with the server stopped); Node has no
+  worker runtime to test it in.
 - **Web Audio adapters.** They are thin glue over browser APIs that Node
   cannot run; mocking `AnalyserNode` would only assert that we call it.
 - **Structure and pitch on real music.** The thresholds are tuned on
