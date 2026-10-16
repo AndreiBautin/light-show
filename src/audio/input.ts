@@ -59,15 +59,24 @@ export async function openFile(file: File): Promise<AudioInput> {
   const element = new Audio(url);
   element.loop = true;
   const ctx = new AudioContext();
-  const analyser = createAnalyser(ctx);
-  const source = ctx.createMediaElementSource(element);
-  source.connect(analyser);
-  analyser.connect(ctx.destination);
-  await element.play();
-  return wrap(ctx, analyser, () => {
+  const release = (): void => {
     element.pause();
+    element.removeAttribute('src');
     URL.revokeObjectURL(url);
-  });
+  };
+  try {
+    const analyser = createAnalyser(ctx);
+    const source = ctx.createMediaElementSource(element);
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+    await element.play();
+    return wrap(ctx, analyser, release);
+  } catch (err) {
+    // An undecodable file must not leave an object URL and an audio context behind.
+    release();
+    void ctx.close();
+    throw err;
+  }
 }
 
 /**

@@ -30,8 +30,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          void caches.open(CACHE).then((cache) => cache.put('./', copy));
+          if (cacheable(response)) event.waitUntil(storeShell(response.clone()));
           return response;
         })
         .catch(() => caches.match('./').then((hit) => hit ?? Response.error())),
@@ -45,12 +44,32 @@ self.addEventListener('fetch', (event) => {
       (hit) =>
         hit ??
         fetch(request).then((response) => {
-          if (response.ok) {
+          if (cacheable(response)) {
             const copy = response.clone();
-            void caches.open(CACHE).then((cache) => cache.put(request, copy));
+            event.waitUntil(caches.open(CACHE).then((cache) => cache.put(request, copy)));
           }
           return response;
         }),
     ),
   );
 });
+
+/** Only complete, same-origin successes: never an error page, a redirect or an opaque body. */
+function cacheable(response) {
+  return response.ok && response.status === 200 && response.type === 'basic';
+}
+
+/**
+ * Cache the new page, then drop hashed assets it no longer references, so
+ * every deploy does not leave the previous build's bundle behind forever.
+ */
+async function storeShell(response) {
+  const cache = await caches.open(CACHE);
+  const html = await response.clone().text();
+  await cache.put('./', response);
+  for (const req of await cache.keys()) {
+    const path = new URL(req.url).pathname;
+    const file = path.slice(path.lastIndexOf('/') + 1);
+    if (path.includes('/assets/') && !html.includes(file)) await cache.delete(req);
+  }
+}

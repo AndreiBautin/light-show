@@ -11,6 +11,7 @@ import { SCENES } from './render/scenes';
 import { bindControls } from './ui/controls';
 import { byId } from './ui/dom';
 import { createHud } from './ui/hud';
+import { checkAudioFile } from './ui/file-check';
 import { createPanel, type SourceId } from './ui/panel';
 import { flagFromQuery, queryForScene, sceneFromQuery } from './ui/scene-url';
 
@@ -114,6 +115,14 @@ function open(source: SourceId, file: File | undefined): Promise<AudioInput> {
 }
 
 async function start(source: SourceId, file?: File): Promise<void> {
+  if (file) {
+    const verdict = checkAudioFile(file.name, file.type, file.size);
+    if (!verdict.ok) {
+      log.warn('audio.file_rejected', { type: file.type, bytes: file.size });
+      panel.setStatus(verdict.reason);
+      return;
+    }
+  }
   input?.stop();
   input = undefined;
   panel.setStatus('Starting…');
