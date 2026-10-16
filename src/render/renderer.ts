@@ -55,9 +55,9 @@ export function createRenderer(canvas: HTMLCanvasElement): Renderer {
   const names = Object.keys(SCALARS) as ScalarName[];
   const loc = names.map((name) => [gl.getUniformLocation(program, name), SCALARS[name]] as const);
 
-  // Render below native resolution on dense screens: the field is soft anyway.
+  // Render at CSS-pixel resolution: the raymarched room is too costly at native density.
   const resize = (): void => {
-    const scale = Math.min(window.devicePixelRatio, 1.5);
+    const scale = Math.min(window.devicePixelRatio, 1);
     const w = Math.floor(canvas.clientWidth * scale);
     const h = Math.floor(canvas.clientHeight * scale);
     if (canvas.width !== w || canvas.height !== h) {

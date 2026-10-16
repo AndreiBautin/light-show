@@ -1,10 +1,13 @@
 # Light Show
 
 Abstract light that moves with your music, in the browser. Play the built-in
-demo track, listen through the microphone, or drop in a file. Three layers of
-cool light drift in the dark like a lava lamp, each played by a different part
-of the music: big slow blobs by the bass, mid-size blobs by chords and vocals
-(rising and turning violet with the melody), small bubbles by the hats. The
+demo track (silent: it only drives the visuals), listen through the
+microphone, or drop in a file. You stand inside a dark-blue cyberpunk lava
+lamp — ribbed glass, neon rings, a wet reflective floor — while glowing wax
+blobs rise, merge and wander through it, each layer played by a different part
+of the music: big electric-blue blobs by the bass, cyan-to-magenta blobs by
+chords and vocals (riding higher and pinker with the melody), dust in the air
+by the hats. The
 song's structure shapes the whole picture: quiet intros stay sparse and dim,
 builds draw everything to the centre, drops release it outward, breakdowns
 empty out. The beat itself has no effect of its own.
